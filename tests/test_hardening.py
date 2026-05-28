@@ -315,6 +315,7 @@ class HardeningTests(unittest.TestCase):
                 "source_path": str(source),
                 "output_path": str(output),
                 "deploy": {
+                    "mode": "landing",
                     "nas_path": "/mnt/downloads/mafl/config.yml",
                     "path": "/docker/mafl/config.yml",
                     "restart_command": "docker restart mafl",
@@ -332,6 +333,36 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(request_data["source"], "/mnt/downloads/mafl/config.yml")
         self.assertEqual(request_data["destination"], "/docker/mafl/config.yml")
         self.assertEqual(request_data["restart_command"], "docker restart mafl")
+
+    def test_mafl_deploy_direct_mode_writes_to_live_path_without_request(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        landing_output = Path(self.tmp.name) / "landing" / "config.yml"
+        live_output = Path(self.tmp.name) / "docker" / "mafl" / "config.yml"
+        source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
+        service = ServiceRecord(
+            **valid_service(
+                exposure={"homepage": True, "reverse_proxy": True, "public": False},
+            )
+        )
+        integrations = IntegrationsConfig(
+            mafl={
+                "source_path": str(source),
+                "output_path": str(landing_output),
+                "deploy": {
+                    "mode": "direct",
+                    "path": str(live_output),
+                },
+            },
+        )
+
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            import asyncio
+
+            asyncio.run(sync_mafl([service]))
+
+        self.assertTrue(live_output.exists())
+        self.assertFalse(landing_output.exists())
+        self.assertFalse(live_output.with_name("config.deploy.yml").exists())
 
     def test_mafl_promote_service_quotes_restart_command(self):
         service_text = Path("deploy/mafl-promote.service").read_text(encoding="utf-8")

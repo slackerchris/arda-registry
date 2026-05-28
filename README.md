@@ -178,15 +178,20 @@ The token requires `VM.PowerMgmt` on `/vms` and `VM.Audit` to read power state. 
 pveum acl set /vms --user ansible@pve --roles PVEVMAdmin
 ```
 
-### Mafl Deploy via NAS Landing Zone
+### Mafl Deploy Modes
 
-The normal deploy writes the rendered Mafl config to a NAS landing zone and writes a small deploy request next to it. A local mover inside the Mafl LXC promotes the file into the live `/docker/mafl` config directory and restarts Mafl. This avoids SSH or Proxmox exec from Arda:
+Arda supports two Mafl deploy modes. Use `landing` when Arda and Mafl are on different hosts sharing a NAS path. Use `direct` when Arda runs on the same box as Mafl and can mount the live Mafl config directory.
+
+#### Landing Mode
+
+Landing mode writes the rendered Mafl config to a NAS landing zone and writes a small deploy request next to it. A local mover inside the Mafl LXC promotes the file into the live `/docker/mafl` config directory and restarts Mafl. This avoids SSH or Proxmox exec from Arda:
 
 ```yaml
 mafl:
   source_path: data/mafl.yml
   output_path: /mnt/nas-downloads/mafl/config.yml   # NAS mount on this host
   deploy:
+    mode: landing
     nas_path: /mnt/downloads/mafl/config.yml   # same landing file, as seen from inside the LXC
     path: /docker/mafl/config.yml              # live config path inside the LXC
     restart_command: docker restart mafl
@@ -209,6 +214,32 @@ systemctl enable --now mafl-promote.path
 ```
 
 If the live directory ever changes, edit `MAFL_DEST_FILE` in `mafl-promote.service` and `mafl.deploy.path` in `data/integrations.yml` to match.
+
+#### Direct Mode
+
+Direct mode writes straight to Mafl's live config path. This skips the NAS sidecar request and the LXC mover. Mount the live config directory into the Arda container:
+
+```yaml
+services:
+  arda-registry:
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - /docker/mafl:/docker/mafl
+```
+
+Then configure:
+
+```yaml
+mafl:
+  source_path: data/mafl.yml
+  output_path: /docker/mafl/config.yml
+  deploy:
+    mode: direct
+    path: /docker/mafl/config.yml
+```
+
+Direct mode writes the file only. Restart Mafl separately unless you intentionally give Arda access to Docker control.
 
 ---
 

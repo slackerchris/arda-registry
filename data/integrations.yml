@@ -16,6 +16,7 @@ mafl:
   source_path: data/mafl.yml
   output_path: /mnt/nas-downloads/mafl/config.yml
   deploy:
+    mode: landing
     nas_path: /mnt/downloads/mafl/config.yml
     path: /docker/mafl/config.yml
     restart_command: docker restart mafl

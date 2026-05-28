@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Literal, Optional
 from urllib.parse import urlparse
 
 import yaml
@@ -46,6 +46,7 @@ class ProxmoxIntegrationConfig(BaseModel):
 
 
 class MaflDeployConfig(BaseModel):
+    mode: Literal["landing", "direct"] = "landing"
     node: Optional[str] = None
     container_id: Optional[int] = None
     nas_path: Optional[str] = None

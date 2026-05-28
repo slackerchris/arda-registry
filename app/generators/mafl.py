@@ -109,6 +109,12 @@ def render_mafl(
     return output_file
 
 
+def _mafl_output_path(mafl) -> str:
+    if mafl.deploy.mode == "direct":
+        return mafl.deploy.path or mafl.output_path
+    return mafl.output_path
+
+
 def _landing_zone_request_path(output_file: Path) -> Path:
     return output_file.with_name(f"{output_file.stem}.deploy.yml")
 
@@ -129,8 +135,12 @@ def _write_landing_zone_request(output_file: Path, deploy) -> Path:
 async def sync_mafl(services: List[ServiceRecord]):
     integrations = load_integrations()
     mafl = integrations.mafl
-    output_file = render_mafl(services, mafl.output_path, mafl.source_path)
+    output_file = render_mafl(services, _mafl_output_path(mafl), mafl.source_path)
     deploy = mafl.deploy
+
+    if deploy.mode == "direct":
+        print(f"Mafl config rendered directly to {output_file}.")
+        return
 
     if not deploy.path:
         print(f"Mafl config rendered to {output_file}. No container copy path configured.")

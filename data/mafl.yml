@@ -1,0 +1,65 @@
+title: Middle Earth Labs
+lang: en
+theme: dark
+behaviour:
+  target: _blank
+services:
+  Infrastructure:
+  - title: Cloudflare
+    description: DNS and tunnels
+    link: https://dash.cloudflare.com/
+    icon:
+      name: simple-icons:cloudflare
+      wrap: true
+      color: '#f38020'
+    tags:
+    - name: Infra
+      color: orange
+  - title: Pi-hole
+    description: DNS and ad blocking
+    link: https://pihole.middl.earth/admin/
+    icon:
+      name: simple-icons:pihole
+      wrap: true
+      color: '#96060c'
+    status:
+      enabled: true
+    tags:
+    - name: Infra
+      color: orange
+  Media & Automation: []
+  AI & Development: []
+  Ops & Monitoring:
+  - title: NUTS UPS
+    description: CyberPower UPS dashboard
+    link: http://10.0.99.11:8080/device/CyberPower-ups
+    icon:
+      name: mdi:battery-high
+      wrap: true
+      color: '#60a5fa'
+    status:
+      enabled: true
+    tags:
+    - name: Ops
+      color: green
+  Bookmarks:
+  - title: Aerthos
+    description: Fantasy book series
+    link: https://aerthos.site/
+    icon:
+      name: mdi:book-open-variant
+      wrap: true
+      color: '#c084fc'
+    tags:
+    - name: Personal
+      color: pink
+  - title: GitHub
+    description: Repositories
+    link: https://github.com/
+    icon:
+      name: simple-icons:github
+      wrap: true
+      color: '#ffffff'
+    tags:
+    - name: Dev
+      color: teal

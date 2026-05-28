@@ -1,0 +1,19 @@
+slug: dnd
+name: Dnd
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: imported
+  ip: 10.0.30.170
+  dns: dnd.middl.earth
+backend:
+  scheme: http
+  port: 4173
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

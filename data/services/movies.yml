@@ -1,0 +1,36 @@
+slug: movies
+name: Radarr
+app: simple-icons:radarr
+group: Media & Automation
+description: Movie management
+tags:
+- media
+- family
+- proxy
+- video
+network:
+  vlan: '10'
+  ip: 10.0.50.12
+  dns:
+  - movies.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 7878
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: true
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 400
+  gpu: false
+api:
+  base_url: https://movies.throne.middl.earth/api/v3
+  key: $RADARR_API_KEY
+  key_header: X-Api-Key
+  status_path: /system/status
+  verify_ssl: true
+active: true

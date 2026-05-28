@@ -1,0 +1,26 @@
+slug: eckman
+name: Eckman
+group: Personal
+description: Imported from Nginx Proxy Manager
+tags:
+- webpage
+network:
+  vlan: '10'
+  ip: 10.0.50.14
+  dns:
+  - eckman.solutions
+  domains: []
+backend:
+  scheme: http
+  port: 3001
+  health_path: /health
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: true
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+active: true

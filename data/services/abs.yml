@@ -1,0 +1,40 @@
+slug: abs
+name: Audiobookshelf
+app: simple-icons:audiobookshelf
+group: Media & Automation
+description: Audiobook library
+tags:
+- media
+- family
+- proxy
+- audiobooks
+network:
+  vlan: '10'
+  ip: 10.0.50.11
+  dns:
+  - audio.throne.middl.earth
+  domains:
+  - name: abs.middl.earth
+    usage:
+    - public
+backend:
+  scheme: http
+  port: 13378
+  health_path: /ping
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: true
+  force_ssl: true
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 106
+  gpu: false
+api:
+  base_url: https://audio.throne.middl.earth
+  key: $ABS_API_KEY
+  key_header: X-Api-Key
+  status_path: /ping
+  verify_ssl: true
+active: true

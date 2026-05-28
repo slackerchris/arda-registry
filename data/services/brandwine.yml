@@ -1,0 +1,33 @@
+slug: brandwine
+name: brandywine
+group: Infrastructure
+description: proxmox, server
+tags:
+- proxmox
+- server
+network:
+  vlan: '99'
+  ip: 10.0.99.3
+  dns: []
+  domains:
+  - name: brandywine.throne.middl.earth
+    usage:
+    - internal
+backend:
+  scheme: https
+  port: 8006
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: bare
+  host: brandywine
+  gpu: true
+api:
+  base_url: https://10.0.99.3:8006
+  key_header: X-Api-Key
+  status_path: /api2/json/version
+  verify_ssl: true
+active: true

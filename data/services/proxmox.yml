@@ -1,0 +1,33 @@
+slug: proxmox
+name: Proxmox VE
+app: simple-icons:proxmox
+group: Infrastructure
+description: Virtualization platform
+tags:
+- proxmox
+- server
+network:
+  vlan: '99'
+  ip: 10.0.99.13
+  dns:
+  - proxmox.throne.middl.earth
+  domains:
+  - name: proxmox.middl.earth
+    usage:
+    - public
+backend:
+  scheme: https
+  port: 8443
+  health_path: /api2/json/cluster/resources
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+api:
+  base_url: https://10.0.99.13:8443
+  key: $PVE_API_TOKEN
+  key_header: Authorization
+  status_path: /api2/json/cluster/resources
+  verify_ssl: true
+active: true

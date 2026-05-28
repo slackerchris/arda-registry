@@ -1,0 +1,31 @@
+slug: page
+name: Page
+group: Infrastructure
+description: Imported from Nginx Proxy Manager
+tags:
+- homepage
+network:
+  vlan: '0'
+  ip: 10.0.0.98
+  dns:
+  - page.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 3000
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: ping
+  maintenance: false
+runtime:
+  type: docker
+  host: brandywine
+  container_id: 200
+  container_name: homepage-mafl-1
+  gpu: false
+active: true

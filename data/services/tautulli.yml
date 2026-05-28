@@ -1,0 +1,22 @@
+slug: tautulli
+name: Tautulli
+app: Tautulli
+group: Media & Automation
+description: Imported from Nginx Proxy Manager
+tags:
+- Automation
+network:
+  vlan: imported
+  ip: 10.0.50.99
+  dns:
+  - tautulli.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8181
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: true

@@ -1,0 +1,42 @@
+slug: jellyfin
+name: Jellyfin
+app: simple-icons:jellyfin
+group: Media & Automation
+description: Family media server
+tags:
+- media
+- family
+- proxy
+- video
+network:
+  vlan: media
+  ip: 10.0.50.100
+  dns:
+  - jellyfin.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8094
+  health_path: /health
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 116
+  gpu: false
+api:
+  base_url: http://10.0.50.100:8096
+  key: $JELLYFIN_API_KEY
+  key_header: X-Api-Key
+  status_path: /Health
+  verify_ssl: true
+notes: Family-facing. Do not casually murder this during movie night.
+active: true

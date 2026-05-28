@@ -1,0 +1,19 @@
+slug: jesters
+name: Jesters
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: imported
+  ip: 10.0.50.14
+  dns: jesters.eckman.solutions
+backend:
+  scheme: http
+  port: 8080
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

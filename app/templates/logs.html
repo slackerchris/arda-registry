@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <h1>Logs
+    <span style="font-size:14px; font-weight:400; color:#6b7280;">{{ entries|length }} entries</span>
+  </h1>
+  <a href="/logs" class="btn btn-ghost" style="font-size:13px;">↻ Reload</a>
+</div>
+
+{% if not entries %}
+<div class="card">
+  <div class="empty-state">
+    <p>No log entries yet.</p>
+    <p style="font-size:13px;">Health checks write to <code>output/logs/ops_health.log</code> after the first <a href="/api/status">/api/status</a> call.</p>
+  </div>
+</div>
+{% else %}
+
+<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+  <input id="log-search" type="search" placeholder="Search logs…"
+         style="flex:1; min-width:200px; padding:7px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#111827; outline:none;">
+  <select id="event-filter"
+          style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#111827; outline:none;">
+    <option value="">All events</option>
+    {% for et in event_types %}
+    <option value="{{ et }}">{{ et }}</option>
+    {% endfor %}
+  </select>
+  <span id="log-count" style="font-size:12px; color:#6b7280; white-space:nowrap;">{{ entries|length }}</span>
+</div>
+
+<div class="card">
+  <table id="log-table">
+    <thead>
+      <tr>
+        <th style="width:160px;">Timestamp</th>
+        <th style="width:100px;">Event</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      {% set event = entry.get('event', 'unknown') %}
+      <tr class="log-row"
+          data-event="{{ event }}"
+          data-search="{{ entry | tojson | lower }}">
+        <td style="font-family:monospace; font-size:12px; white-space:nowrap; color:#6b7280;">{{ entry._ts }}</td>
+        <td>
+          {% if event == 'service_check' %}
+            {% if entry.get('maintenance') %}
+              <span class="badge badge-yellow">{{ event }}</span>
+            {% elif entry.get('effective_status') == 'up' %}
+              <span class="badge badge-green">{{ event }}</span>
+            {% else %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b;">{{ event }}</span>
+            {% endif %}
+          {% elif event == 'status_summary' %}
+            {% if entry.get('color') == 'green' %}
+              <span class="badge badge-green">{{ event }}</span>
+            {% elif entry.get('color') == 'yellow' %}
+              <span class="badge badge-yellow">{{ event }}</span>
+            {% elif entry.get('color') == 'red' %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b;">{{ event }}</span>
+            {% else %}
+              <span class="badge badge-gray">{{ event }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge badge-gray">{{ event }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px;">
+          {% if event == 'service_check' %}
+            <span style="font-family:monospace; font-weight:600;">{{ entry.get('slug', '?') }}</span>
+            · {{ entry.get('effective_status', '?') }}
+            {% if entry.get('status_code') %} · HTTP {{ entry.get('status_code') }}{% endif %}
+            {% if entry.get('error') %} · <span style="color:#ef4444;">{{ entry.get('error') }}</span>{% endif %}
+            {% if entry.get('attempts') and entry.get('attempts') > 1 %} · {{ entry.get('attempts') }} attempts{% endif %}
+            {% if entry.get('url') %} · <span style="color:#9ca3af; font-family:monospace;">{{ entry.get('url') }}</span>{% endif %}
+          {% elif event == 'status_summary' %}
+            <span style="font-weight:600;">{{ (entry.get('color') or 'gray')|upper }}</span>
+            · checked={{ entry.get('checked', 0) }}
+            · up={{ entry.get('up', 0) }}
+            · down={{ entry.get('down', 0) }}
+            · maint={{ entry.get('maintenance', 0) }}
+            {% if entry.get('down_list') %} · <span style="color:#ef4444;">{{ entry.get('down_list') | join(', ') }}</span>{% endif %}
+          {% elif event == 'status_cache_hit' %}
+            cached · age={{ entry.get('cache_age_seconds', '?') }}s · checked={{ entry.get('checked', 0) }}
+          {% else %}
+            <details style="display:inline;">
+              <summary style="cursor:pointer; font-size:12px; list-style:none; color:#6b7280;">view JSON</summary>
+              <pre style="font-size:11px; margin-top:6px; background:#f8fafc; padding:8px; border-radius:4px; overflow-x:auto;">{{ entry | tojson(indent=2) }}</pre>
+            </details>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  const search = document.getElementById('log-search');
+  const eventFilter = document.getElementById('event-filter');
+  const countEl = document.getElementById('log-count');
+  const rows = Array.from(document.querySelectorAll('.log-row'));
+  const total = rows.length;
+
+  function applyFilters() {
+    const q = (search.value || '').trim().toLowerCase();
+    const ev = eventFilter.value;
+    let visible = 0;
+    rows.forEach(row => {
+      const matchEvent = !ev || row.dataset.event === ev;
+      const matchSearch = !q || (row.dataset.search || '').includes(q);
+      const show = matchEvent && matchSearch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (countEl) countEl.textContent = (q || ev) ? `${visible} of ${total}` : total;
+  }
+
+  if (search) search.addEventListener('input', applyFilters);
+  if (eventFilter) eventFilter.addEventListener('change', applyFilters);
+}());
+</script>
+{% endif %}
+{% endblock %}

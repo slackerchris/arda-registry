@@ -1,0 +1,21 @@
+proxmox:
+  key: $PVE_API_TOKEN
+  verify_ssl: false
+  nodes:
+    cluster:
+      base_url: https://10.0.99.13:8443
+    proxmox:
+      base_url: https://10.0.99.13:8443
+    helmsdeep:
+      base_url: https://10.0.99.4:8006
+    mountdoom:
+      base_url: https://10.0.99.2:8006
+    brandywine:
+      base_url: https://10.0.99.3:8006
+mafl:
+  source_path: data/mafl.yml
+  output_path: /mnt/nas-downloads/mafl/config.yml
+  deploy:
+    nas_path: /mnt/downloads/mafl/config.yml
+    path: /docker/mafl/config.yml
+    restart_command: docker restart mafl

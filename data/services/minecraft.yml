@@ -1,0 +1,19 @@
+slug: minecraft
+name: Minecraft
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: imported
+  ip: 10.0.0.12
+  dns: minecraft.middl.earth
+backend:
+  scheme: http
+  port: 8080
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

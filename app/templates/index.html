@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 style="margin-bottom:20px;">
+  Active Services
+  <span style="font-size:14px; font-weight:400; color:#6b7280;">{{ active_services|length }}</span>
+  {% if inactive_count %}
+  <span style="font-size:12px; font-weight:400; color:#9ca3af; margin-left:6px;">({{ inactive_count }} inactive)</span>
+  {% endif %}
+</h1>
+
+{% if flash_error %}
+<div class="alert alert-danger" style="margin-bottom:16px;">{{ flash_error }}</div>
+{% endif %}
+{% if flash_renamed is not none %}
+<div class="alert" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:16px;">
+  Renamed <strong>{{ flash_renamed }}</strong> service(s) to group <strong>{{ flash_renamed_to }}</strong>.
+</div>
+{% endif %}
+{% if flash_lxc_action %}
+<div class="alert" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; margin-bottom:16px;">
+  Proxmox LXC {{ flash_lxc_action }} requested for <strong>{{ flash_lxc_service }}</strong>{% if flash_lxc_task %} · task <code>{{ flash_lxc_task }}</code>{% endif %}.
+</div>
+{% endif %}
+{% if flash_vm_action %}
+<div class="alert" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; margin-bottom:16px;">
+  Proxmox VM {{ flash_vm_action }} requested for <strong>{{ flash_vm_service }}</strong>{% if flash_vm_task %} · task <code>{{ flash_vm_task }}</code>{% endif %}.
+</div>
+{% endif %}
+{% if flash_docker_action %}
+<div class="alert" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; margin-bottom:16px;">
+  Docker {{ flash_docker_action }} requested for <strong>{{ flash_docker_service }}</strong> (<code>{{ flash_docker_container }}</code>){% if flash_docker_task %} · task <code>{{ flash_docker_task }}</code>{% endif %}.
+</div>
+{% endif %}
+{% if load_errors %}
+<div class="alert alert-danger">
+  <strong>Registry errors:</strong>
+  <ul>
+    {% for path, err in load_errors %}
+    <li><code>{{ path }}</code>: {{ err }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if active_services %}
+<div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+  <input id="service-filter" type="search" placeholder="Filter active services…"
+         style="flex:1; padding:7px 12px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#111827; outline:none;">
+  <select id="service-sort"
+          style="padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#111827; outline:none;">
+    <option value="group-name">Sort: Group + Name</option>
+    <option value="status">Sort: Status</option>
+    <option value="name">Sort: Name</option>
+    <option value="group">Sort: Group</option>
+    <option value="host">Sort: Host</option>
+    <option value="port">Sort: Port</option>
+    <option value="dns">Sort: DNS</option>
+  </select>
+  <span id="filter-count" style="font-size:12px; color:#6b7280; white-space:nowrap;">{{ active_services|length }}</span>
+</div>
+
+<div id="service-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; align-items:start;">
+  {% for svc in active_services %}
+  {% set open_domain = svc.network.domain_for('public', 'external') or svc.network.domain_for('internal', 'service', 'api') or svc.network.primary_dns %}
+  {% if open_domain and svc.exposure.reverse_proxy %}
+    {% set public_url = ('https' if svc.exposure.force_ssl else 'http') ~ '://' ~ open_domain %}
+  {% else %}
+    {% set public_url = svc.backend.scheme ~ '://' ~ svc.network.ip ~ ':' ~ svc.backend.port %}
+  {% endif %}
+  <article class="card"
+           data-search="{{ [svc.slug, svc.name, svc.group, svc.network.ip or '', svc.network.dns_display, svc.tags|join(' ')] | join(' ') | lower }}"
+           data-name="{{ svc.name|lower }}"
+           data-group="{{ svc.group|lower }}"
+           data-port="{{ svc.backend.port }}"
+           data-dns="{{ svc.network.dns_display|lower }}"
+           data-status-sort="3"
+           style="padding:18px; display:flex; flex-direction:column; gap:12px; min-width:0;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+          <span data-status="{{ svc.slug }}" title="Unknown (not checked yet)"
+              style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#e5e7eb; flex:0 0 auto;"></span>
+        <div style="min-width:0;">
+          <div style="font-size:14px; font-weight:600; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ svc.name }}</div>
+          <div style="font-size:11px; color:#9ca3af; font-family:monospace;">{{ svc.slug }}</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:4px; align-items:center;">
+        {% if svc.monitoring and svc.monitoring.maintenance %}
+        <span class="badge badge-yellow">maintenance</span>
+        {% endif %}
+        {% if svc.runtime and svc.runtime.type in ['lxc', 'vm', 'docker'] and svc.runtime.container_id %}
+        <span data-power="{{ svc.slug }}" class="badge badge-gray" style="display:none;"></span>
+        {% endif %}
+        <span class="badge badge-purple">{{ svc.group }}</span>
+      </div>
+    </div>
+
+    <div style="font-size:12px; color:#4b5563; display:grid; grid-template-columns:76px 1fr; row-gap:6px; column-gap:10px;">
+      <span style="color:#9ca3af;">IP</span>
+      <span style="font-family:monospace;">{{ svc.network.ip }}</span>
+      <span style="color:#9ca3af;">Port</span>
+      <span style="font-family:monospace;">{{ svc.backend.port }}</span>
+      <span style="color:#9ca3af;">DNS</span>
+      <span style="font-family:monospace; overflow:hidden; text-overflow:ellipsis;">{{ svc.network.dns_display or '—' }}</span>
+    </div>
+
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      {% if svc.exposure.homepage %}<span class="badge badge-blue">homepage</span>{% endif %}
+      {% if svc.exposure.reverse_proxy %}<span class="badge badge-green">proxy</span>{% endif %}
+      {% if svc.exposure.public %}<span class="badge badge-yellow">public</span>{% endif %}
+      {% for tag in svc.tags[:3] %}<span class="badge badge-gray">{{ tag }}</span>{% endfor %}
+    </div>
+
+    <div style="font-size:11px; color:#6b7280; display:grid; grid-template-columns:78px 1fr; row-gap:5px; column-gap:10px;">
+      <span>Up since</span>
+      <span data-upsince="{{ svc.slug }}">-</span>
+      <span>Last down</span>
+      <span data-lastdown="{{ svc.slug }}">-</span>
+    </div>
+
+    <div style="display:flex; gap:8px; margin-top:auto; flex-wrap:wrap; align-items:center;">
+      <a href="{{ public_url }}" target="_blank" rel="noopener" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Open</a>
+      <a href="/services/{{ svc.slug }}/edit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Edit</a>
+      <a href="/services/{{ svc.slug }}/duplicate" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Duplicate</a>
+      {% if svc.runtime and svc.runtime.type == 'lxc' and svc.runtime.container_id %}
+      {% set runtime_key = svc.runtime.host ~ ':' ~ svc.runtime.container_id %}
+      {% if runtime_key in shared_lxc_runtimes %}
+      <span class="badge badge-yellow" title="Actions affect every service on this LXC">shared LXC</span>
+      {% endif %}
+      <form method="post" action="/services/{{ svc.slug }}/lxc/start" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Start</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/lxc/restart" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Restart</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/lxc/stop" style="display:inline;" onsubmit="return confirm('Stop {{ svc.name }} LXC {{ svc.runtime.container_id }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-danger-sm">Stop</button>
+      </form>
+      {% endif %}
+      {% if svc.runtime and svc.runtime.type == 'vm' and svc.runtime.container_id %}
+      <form method="post" action="/services/{{ svc.slug }}/vm/start" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Start</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/vm/restart" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Restart</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/vm/stop" style="display:inline;" onsubmit="return confirm('Stop {{ svc.name }} VM {{ svc.runtime.container_id }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-danger-sm">Stop</button>
+      </form>
+      {% endif %}
+      {% if svc.runtime and svc.runtime.type == 'docker' and svc.runtime.container_name %}
+      <span class="badge badge-blue" title="Docker via Proxmox exec on LXC {{ svc.runtime.container_id }}">docker</span>
+      <form method="post" action="/services/{{ svc.slug }}/docker/start" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Start</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/docker/restart" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Restart</button>
+      </form>
+      <form method="post" action="/services/{{ svc.slug }}/docker/stop" style="display:inline;" onsubmit="return confirm('Stop Docker container {{ svc.runtime.container_name }} on {{ svc.runtime.host }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-danger-sm">Stop</button>
+      </form>
+      {% endif %}
+      <form method="post" action="/services/{{ svc.slug }}/toggle" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Disable</button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <p>No active services right now.</p>
+    <a href="/services/new" class="btn btn-primary">Add your first service</a>
+  </div>
+</div>
+{% endif %}
+
+{% if inactive_services %}
+<details style="margin-top:14px;">
+  <summary style="cursor:pointer; font-size:13px; color:#6b7280; user-select:none;">
+    Disabled services ({{ inactive_services|length }})
+  </summary>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; margin-top:10px;">
+    {% for svc in inactive_services %}
+    <article class="card" style="padding:12px; opacity:0.75; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div style="min-width:0;">
+          <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ svc.name }}</div>
+          <div style="font-size:11px; color:#9ca3af; font-family:monospace;">{{ svc.slug }}</div>
+        </div>
+        <span class="badge badge-gray">{{ svc.group }}</span>
+      </div>
+      <div style="font-size:12px; color:#6b7280; font-family:monospace; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+        {{ svc.network.ip }}{% if svc.network.dns_display %} · {{ svc.network.dns_display }}{% endif %}
+      </div>
+      <div style="display:flex; gap:6px; margin-top:auto;">
+        <a href="/services/{{ svc.slug }}/edit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Edit</a>
+        <a href="/services/{{ svc.slug }}/duplicate" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Duplicate</a>
+        <form method="post" action="/services/{{ svc.slug }}/toggle" style="display:inline;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px;">Enable</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</details>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const fmt = (iso) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : d.toLocaleString();
+  };
+  const grid = document.getElementById('service-grid');
+  const sortSelect = document.getElementById('service-sort');
+  const applySort = () => {
+    if (!grid || !sortSelect) return;
+    const cards = Array.from(grid.querySelectorAll('article'));
+    const mode = sortSelect.value;
+    const val = (card, key) => card.dataset[key] || '';
+    cards.sort((a, b) => {
+      if (mode === 'status') {
+        const primary = Number(val(a, 'statusSort')) - Number(val(b, 'statusSort'));
+        if (primary !== 0) return primary;
+        return val(a, 'name').localeCompare(val(b, 'name'));
+      }
+      if (mode === 'port') {
+        const primary = Number(val(a, 'port')) - Number(val(b, 'port'));
+        if (primary !== 0) return primary;
+        return val(a, 'name').localeCompare(val(b, 'name'));
+      }
+      if (mode === 'group-name') {
+        const groupCmp = val(a, 'group').localeCompare(val(b, 'group'));
+        if (groupCmp !== 0) return groupCmp;
+        return val(a, 'name').localeCompare(val(b, 'name'));
+      }
+      const cmp = val(a, mode).localeCompare(val(b, mode));
+      if (cmp !== 0) return cmp;
+      return val(a, 'name').localeCompare(val(b, 'name'));
+    });
+    cards.forEach(card => grid.appendChild(card));
+  };
+
+  if (sortSelect) {
+    const params = new URLSearchParams(window.location.search);
+    const savedSort = params.get('sortCards');
+    if (savedSort && sortSelect.querySelector(`option[value="${savedSort}"]`)) {
+      sortSelect.value = savedSort;
+    }
+    sortSelect.addEventListener('change', () => {
+      const url = new URL(window.location);
+      url.searchParams.set('sortCards', sortSelect.value);
+      history.replaceState(null, '', url);
+      applySort();
+    });
+    applySort();
+  }
+
+  try {
+    const resp = await fetch('/api/status');
+    const data = await resp.json();
+    for (const [slug, status] of Object.entries(data)) {
+      const el = document.querySelector(`[data-status="${slug}"]`);
+      if (!el) continue;
+      const card = el.closest('article');
+      if (status.maintenance) {
+        el.style.background = '#f59e0b';
+        el.title = status.maintenance_reason || 'Maintenance mode';
+        if (card) card.dataset.statusSort = '1';
+      } else {
+        el.style.background = status.up ? '#22c55e' : '#ef4444';
+        el.title = status.up
+          ? `Up \u2014 HTTP ${status.status_code}`
+          : (status.error || `Down \u2014 HTTP ${status.status_code}`);
+        if (card) card.dataset.statusSort = status.up ? '0' : '2';
+      }
+      const upSince = document.querySelector(`[data-upsince="${slug}"]`);
+      const lastDown = document.querySelector(`[data-lastdown="${slug}"]`);
+      if (upSince) upSince.textContent = fmt(status.up_since);
+      if (lastDown) lastDown.textContent = fmt(status.last_down);
+    }
+    if (sortSelect && sortSelect.value === 'status') applySort();
+  } catch (_) {}
+
+  try {
+    const resp = await fetch('/api/proxmox/status');
+    const data = await resp.json();
+    for (const [slug, info] of Object.entries(data)) {
+      const el = document.querySelector(`[data-power="${slug}"]`);
+      if (!el) continue;
+      const power = info.power || 'unknown';
+      el.textContent = power;
+      el.className = power === 'running'
+        ? 'badge badge-green'
+        : power === 'stopped'
+          ? 'badge badge-gray'
+          : power === 'paused'
+            ? 'badge badge-yellow'
+            : 'badge badge-gray';
+      el.style.display = '';
+    }
+  } catch (_) {}
+});
+</script>
+
+<script>
+(function () {
+  const input = document.getElementById('service-filter');
+  const countEl = document.getElementById('filter-count');
+  if (!input) return;
+  const cards = Array.from(document.querySelectorAll('#service-grid article'));
+  const total = cards.length;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    let visible = 0;
+    cards.forEach(card => {
+      const match = !q || (card.dataset.search || '').includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    if (countEl) countEl.textContent = q ? `${visible} of ${total}` : total;
+  });
+}());
+</script>
+
+{% endblock %}

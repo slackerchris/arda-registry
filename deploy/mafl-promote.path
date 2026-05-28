@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch Arda Mafl deploy requests
+
+[Path]
+PathChanged=/mnt/downloads/mafl/config.deploy.yml
+PathExists=/mnt/downloads/mafl/config.deploy.yml
+Unit=mafl-promote.service
+
+[Install]
+WantedBy=multi-user.target

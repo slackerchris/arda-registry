@@ -1,0 +1,30 @@
+slug: truenas
+name: TrueNAS
+app: simple-icons:truenas
+group: Infrastructure
+description: Network storage
+tags:
+- Infrastructure
+- Storage
+network:
+  vlan: '99'
+  ip: 10.0.99.14
+  dns:
+  - truenas.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 80
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+api:
+  base_url: https://truenas.throne.middl.earth
+  key: $TRUENAS_API_KEY
+  key_header: Authorization
+  key_prefix: Bearer
+  status_path: /api/v2.0/alert/list
+  verify_ssl: false
+active: true

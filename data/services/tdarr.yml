@@ -1,0 +1,22 @@
+slug: tdarr
+name: Tdarr
+group: Media & Automation
+app: mdi:movie-cog
+description: Media transcoding automation
+tags:
+- Automation
+network:
+  vlan: imported
+  ip: 10.0.99.6
+  dns:
+  - tdarr.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8265
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: true

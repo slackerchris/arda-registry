@@ -1,0 +1,27 @@
+slug: openclaw
+name: Openclaw
+group: AI & Development
+description: Imported from Nginx Proxy Manager
+tags:
+- AI
+- tool
+network:
+  vlan: '30'
+  ip: 10.0.30.170
+  dns:
+  - openclaw.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8787
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: true
+runtime:
+  type: vm
+  host: helmsdeep
+  container_id: 123
+  gpu: false
+active: true

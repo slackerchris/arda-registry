@@ -1,0 +1,10 @@
+[Unit]
+Description=Promote Arda-rendered Mafl config from NAS landing zone
+
+[Service]
+Type=oneshot
+Environment=MAFL_DEPLOY_REQUEST=/mnt/downloads/mafl/config.deploy.yml
+Environment=MAFL_SOURCE_FILE=/mnt/downloads/mafl/config.yml
+Environment=MAFL_DEST_FILE=/docker/mafl/config.yml
+Environment="MAFL_RESTART_COMMAND=docker restart mafl"
+ExecStart=/usr/local/sbin/mafl-promote.sh

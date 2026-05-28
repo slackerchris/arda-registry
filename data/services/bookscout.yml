@@ -1,0 +1,33 @@
+slug: bookscout
+name: Bookscout
+group: Media & Automation
+description: Imported from Nginx Proxy Manager
+tags:
+- Metadata
+- audiobooks
+network:
+  vlan: '10'
+  ip: 10.0.50.45
+  dns:
+  - bookscout.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8282
+  health_path: /health
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+runtime:
+  type: docker
+  host: helmsdeep
+  container_id: 102
+  container_name: Bookscout
+  gpu: false
+active: true

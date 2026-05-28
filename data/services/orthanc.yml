@@ -1,0 +1,29 @@
+slug: orthanc
+name: Portainer
+app: simple-icons:portainer
+group: AI & Development
+description: Docker management
+tags:
+- docker
+network:
+  vlan: '10'
+  ip: 10.0.50.45
+  dns:
+  - orthanc.middl.earth
+  - orthanc.throne.middl.earth
+  domains: []
+backend:
+  scheme: https
+  port: 9443
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 102
+  container_name: portainer
+  gpu: false
+active: true

@@ -1,0 +1,37 @@
+slug: tv
+name: Sonarr
+app: simple-icons:sonarr
+group: Media & Automation
+description: TV series management
+tags:
+- media
+- family
+- proxy
+- video
+network:
+  vlan: '10'
+  ip: 10.0.50.12
+  dns:
+  - tv.middl.earth
+  - tv.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8989
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: true
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 400
+  gpu: false
+api:
+  base_url: https://tv.throne.middl.earth/api/v3
+  key: $SONARR_API_KEY
+  key_header: X-Api-Key
+  status_path: /system/status
+  verify_ssl: true
+active: true

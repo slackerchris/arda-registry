@@ -1,0 +1,19 @@
+slug: grocy
+name: Grocy
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: imported
+  ip: 10.0.0.85
+  dns: grocy.throne.middl.earth
+backend:
+  scheme: http
+  port: 80
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

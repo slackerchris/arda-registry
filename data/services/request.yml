@@ -1,0 +1,31 @@
+slug: request
+name: Overseerr
+app: mdi:movie-open
+group: Media & Automation
+description: Media requests
+tags:
+- indexing
+- search
+network:
+  vlan: '10'
+  ip: 10.0.50.12
+  dns:
+  - request.throne.middl.earth
+  domains:
+  - name: request.middl.earth
+    usage:
+    - public
+backend:
+  scheme: http
+  port: 5055
+  health_path: /api/v1/status
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+active: true

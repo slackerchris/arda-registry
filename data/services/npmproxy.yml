@@ -1,0 +1,35 @@
+slug: npmproxy
+name: Nginx Proxy Manager
+app: simple-icons:nginxproxymanager
+group: Infrastructure
+description: Reverse proxy and SSL
+tags:
+- docker
+network:
+  vlan: '0'
+  ip: 10.0.0.98
+  dns:
+  - proxy.middl.earth
+  domains:
+  - name: npmproxy.throne.middl.earth
+    usage:
+    - internal
+backend:
+  scheme: https
+  port: 81
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: true
+  force_ssl: true
+monitoring:
+  enabled: true
+  type: ping
+  maintenance: false
+runtime:
+  type: lxc
+  host: brandywine
+  container_id: 200
+  container_name: npm
+  gpu: false
+active: true

@@ -1,0 +1,32 @@
+slug: openwebui
+name: Open WebUI
+app: mdi:robot-outline
+group: AI & Development
+description: LLM chat interface
+tags:
+- AI
+network:
+  vlan: '10'
+  ip: 10.0.50.4
+  dns:
+  - openwebui.throne.middl.earth
+  domains: []
+backend:
+  scheme: https
+  port: 8080
+  health_path: /health
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 710
+  gpu: false
+active: true

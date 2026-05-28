@@ -1,0 +1,30 @@
+slug: torrent
+name: qBittorrent
+app: simple-icons:qbittorrent
+group: Media & Automation
+description: Torrent downloader
+tags:
+- media
+- family
+- proxy
+- downloadds
+network:
+  vlan: '10'
+  ip: 10.0.50.13
+  dns:
+  - torrent.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 8080
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 118
+  gpu: false
+active: true

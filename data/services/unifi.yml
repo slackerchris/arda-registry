@@ -1,0 +1,29 @@
+slug: unifi
+name: UniFi Controller
+app: simple-icons:ubiquiti
+group: Infrastructure
+description: Network management
+tags:
+- Network
+network:
+  vlan: '0'
+  ip: 10.0.0.1
+  dns:
+  - unifi.local
+  domains: []
+backend:
+  scheme: https
+  port: 443
+  health_path: /status
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+api:
+  base_url: https://unifi.local
+  key: $UNIFI_API_TOKEN
+  key_header: X-Api-Key
+  status_path: /proxy/network/api/s/default/stat/device
+  verify_ssl: false
+active: true

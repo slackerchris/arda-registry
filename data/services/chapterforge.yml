@@ -1,0 +1,33 @@
+slug: chapterforge
+name: Chapterforge
+group: Media & Automation
+description: Imported from Nginx Proxy Manager
+tags:
+- audiobooks
+network:
+  vlan: '10'
+  ip: 10.0.50.14
+  dns: []
+  domains:
+  - name: chapterforge.throne.middl.earth
+    usage:
+    - internal
+backend:
+  scheme: http
+  port: 8890
+  health_path: /health
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: http
+  maintenance: false
+runtime:
+  type: docker
+  host: helmsdeep
+  container_id: 103
+  gpu: false
+active: true

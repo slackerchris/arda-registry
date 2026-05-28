@@ -1,0 +1,34 @@
+slug: mountdoom
+name: Mountdoom
+app: proxmox
+group: Infrastructure
+description: Imported from Nginx Proxy Manager
+tags:
+- proxmox
+- server
+network:
+  vlan: '99'
+  ip: 10.0.99.2
+  dns: []
+  domains:
+  - name: mountdoom.throne.middl.earth
+    usage:
+    - internal
+backend:
+  scheme: https
+  port: 8006
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: bare
+  host: mountdoom
+  gpu: false
+api:
+  base_url: https://10.0.99.2:8006
+  key_header: X-Api-Key
+  status_path: /api2/json/version
+  verify_ssl: false
+active: true

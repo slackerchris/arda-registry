@@ -1,0 +1,29 @@
+slug: photos
+name: Immich
+app: simple-icons:immich
+group: Media & Automation
+description: Photo and video library
+tags:
+- photos
+network:
+  vlan: '10'
+  ip: 10.0.50.45
+  dns:
+  - photos.middl.earth
+  - photos.throne.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 2283
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: docker
+  host: helmsdeep
+  container_id: 102
+  container_name: immich
+  gpu: false
+active: true

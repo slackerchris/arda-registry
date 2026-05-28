@@ -1,0 +1,36 @@
+slug: news
+name: SABnzbd
+app: simple-icons:sabnzbd
+group: Media & Automation
+description: NZB downloader
+tags: []
+network:
+  vlan: '10'
+  ip: 10.0.50.10
+  dns: []
+  domains:
+  - name: news.throne.middl.earth
+    usage:
+    - internal
+  - name: news.middl.earth
+    usage:
+    - public
+backend:
+  scheme: http
+  port: 8081
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: true
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 410
+  gpu: false
+api:
+  base_url: https://news.throne.middl.earth
+  key_header: X-Api-Key
+  status_path: /api?mode=version&output=json
+  verify_ssl: false
+active: true

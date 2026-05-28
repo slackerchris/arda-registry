@@ -1,0 +1,31 @@
+slug: Kokoro
+name: Kokoro
+group: AI & Development
+description: TTS
+tags:
+- audiobooks
+- AI
+network:
+  vlan: '10'
+  ip: 10.0.50.101
+  dns: []
+  domains: []
+backend:
+  scheme: http
+  port: 8880
+  health_path: /health
+exposure:
+  homepage: false
+  reverse_proxy: false
+  public: false
+  force_ssl: false
+monitoring:
+  enabled: true
+  type: ping
+  maintenance: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 720
+  gpu: true
+active: true

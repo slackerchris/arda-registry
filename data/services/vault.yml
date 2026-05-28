@@ -1,0 +1,19 @@
+slug: vault
+name: Vault
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: imported
+  ip: 10.0.0.98
+  dns: vault.middl.earth
+backend:
+  scheme: http
+  port: 41967
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+  <h1>Operations</h1>
+  <button id="refresh-btn" class="btn btn-ghost" style="font-size:13px;">↻ Refresh</button>
+</div>
+
+{% if flash_error %}
+<div class="alert alert-danger" style="margin-bottom:16px;">{{ flash_error }}</div>
+{% endif %}
+{% if flash_maint_action %}
+<div class="alert" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:16px;">
+  Maintenance <strong>{{ flash_maint_action }}</strong> for <strong>{{ flash_maint_service }}</strong>.
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:12px; padding:10px 14px;">
+  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <strong style="font-size:13px;">UniFi</strong>
+    <span id="unifi-state" class="badge badge-gray">loading</span>
+    <span style="font-size:12px; color:#6b7280;">Site: <span id="unifi-site">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">WAN down: <span id="unifi-wan">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Devices: <span id="unifi-devices">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Clients: <span id="unifi-clients">-</span></span>
+  </div>
+  <div id="unifi-error" style="font-size:12px; color:#ef4444; margin-top:6px; display:none;"></div>
+</div>
+
+<div class="card" style="margin-bottom:12px; padding:10px 14px;">
+  <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <strong style="font-size:13px;">Ops Status</strong>
+    <span id="ops-color" class="badge badge-gray">loading</span>
+    <span style="font-size:12px; color:#6b7280;">Checked: <span id="ops-checked">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Up: <span id="ops-up">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Down: <span id="ops-down">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Maintenance: <span id="ops-maint">-</span></span>
+    <span style="font-size:12px; color:#6b7280;">Last check: <span id="ops-last">-</span></span>
+  </div>
+  <div id="ops-down-list" style="font-size:12px; color:#ef4444; margin-top:6px; display:none;"></div>
+  <details style="margin-top:8px;">
+    <summary style="cursor:pointer; font-size:12px; color:#6b7280; user-select:none;">Recent check history</summary>
+    <ul id="ops-history" style="font-size:12px; color:#6b7280; margin-top:8px; padding-left:18px;"></ul>
+  </details>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="section-title" style="margin-bottom:14px;">Service Health</p>
+    <table id="health-table">
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Code</th>
+          <th>Error / Note</th>
+          <th>Up Since</th>
+          <th>Last Down</th>
+          <th>Checked</th>
+          <th style="text-align:center;">Fails</th>
+        </tr>
+      </thead>
+      <tbody id="health-tbody">
+        <tr><td colspan="8" style="text-align:center; color:#6b7280; padding:24px;">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-body">
+    <p class="section-title" style="margin-bottom:14px;">Maintenance</p>
+    {% if active_services %}
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Group</th>
+          <th style="width:110px;">Status</th>
+          <th>Reason</th>
+          <th style="width:100px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for svc in active_services %}
+        <tr>
+          <td style="font-weight:600;">{{ svc.name }}
+            <div style="font-size:11px; color:#9ca3af; font-family:monospace;">{{ svc.slug }}</div>
+          </td>
+          <td style="font-size:12px; color:#6b7280;">{{ svc.group }}</td>
+          <td>
+            {% if svc.monitoring and svc.monitoring.maintenance %}
+            <span class="badge badge-yellow">maintenance</span>
+            {% else %}
+            <span class="badge badge-green">normal</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="/services/{{ svc.slug }}/maintenance"
+                  style="display:flex; gap:6px; align-items:center;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="enabled"
+                     value="{% if svc.monitoring and svc.monitoring.maintenance %}0{% else %}1{% endif %}">
+              <input type="text" name="reason"
+                     placeholder="reason (optional)"
+                     value="{% if svc.monitoring and svc.monitoring.maintenance_reason %}{{ svc.monitoring.maintenance_reason }}{% endif %}"
+                     style="flex:1; min-width:160px; font-size:12px; padding:5px 8px; border:1px solid #d1d5db; border-radius:6px;">
+              <button type="submit" class="btn btn-ghost" style="font-size:12px; padding:4px 10px; white-space:nowrap;">
+                {% if svc.monitoring and svc.monitoring.maintenance %}Resume{% else %}Maintain{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#6b7280; font-size:13px;">No active services.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const fmt = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toLocaleString();
+};
+
+const statusBadge = (status) => {
+  if (status === 'up')          return '<span class="badge badge-green">up</span>';
+  if (status === 'maintenance') return '<span class="badge badge-yellow">maintenance</span>';
+  return '<span class="badge" style="background:#fee2e2;color:#991b1b;">down</span>';
+};
+
+async function loadOps() {
+  try {
+    const r = await fetch('/api/ops/summary');
+    const data = await r.json();
+    const latest = data.latest || {};
+    const badge = document.getElementById('ops-color');
+    if (badge) {
+      badge.textContent = latest.color || 'gray';
+      badge.className = latest.color === 'green' ? 'badge badge-green'
+        : latest.color === 'yellow' ? 'badge badge-yellow'
+        : 'badge badge-gray';
+      if (latest.color === 'red') { badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; }
+      else { badge.style.background = ''; badge.style.color = ''; }
+    }
+    const el = (id) => document.getElementById(id);
+    if (el('ops-checked')) el('ops-checked').textContent = String(latest.checked ?? '-');
+    if (el('ops-up'))      el('ops-up').textContent      = String(latest.up ?? '-');
+    if (el('ops-down'))    el('ops-down').textContent    = String(latest.down ?? '-');
+    if (el('ops-maint'))   el('ops-maint').textContent   = String(latest.maintenance ?? '-');
+    if (el('ops-last'))    el('ops-last').textContent    = fmt(latest.timestamp);
+    const downList = el('ops-down-list');
+    if (downList) {
+      const items = latest.down_list || [];
+      downList.textContent = items.length ? `Down: ${items.join(', ')}` : '';
+      downList.style.display = items.length ? '' : 'none';
+    }
+    const hist = el('ops-history');
+    if (hist) {
+      hist.innerHTML = '';
+      (data.recent || []).slice(0, 10).forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${fmt(item.timestamp)} — ${(item.color || 'gray').toUpperCase()} · up=${item.up ?? 0} down=${item.down ?? 0} maint=${item.maintenance ?? 0}`;
+        hist.appendChild(li);
+      });
+    }
+
+    // Populate health table from services state
+    const tbody = el('health-tbody');
+    if (tbody && data.services) {
+      const rows = Object.entries(data.services).sort(([a], [b]) => a.localeCompare(b));
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;padding:24px;">No services tracked yet — visit Services and wait for the first health check.</td></tr>';
+      } else {
+        tbody.innerHTML = rows.map(([slug, svc]) => `
+          <tr>
+            <td style="font-family:monospace; font-weight:600;">${slug}</td>
+            <td>${statusBadge(svc.status)}</td>
+            <td style="font-family:monospace;">${svc.status_code ?? '—'}</td>
+            <td style="font-size:12px; color:#6b7280; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${(svc.error || svc.maintenance_reason || '').replace(/"/g, '&quot;')}">${svc.error || svc.maintenance_reason || '—'}</td>
+            <td style="font-size:12px;">${fmt(svc.up_since)}</td>
+            <td style="font-size:12px;">${fmt(svc.last_down)}</td>
+            <td style="font-size:12px;">${fmt(svc.last_checked)}</td>
+            <td style="text-align:center; font-size:12px;">${svc.consecutive_failures ?? 0}</td>
+          </tr>`).join('');
+      }
+    }
+  } catch (_) {}
+}
+
+async function loadUnifi() {
+  try {
+    const r = await fetch('/api/unifi/summary');
+    const data = await r.json();
+    const el = (id) => document.getElementById(id);
+    const state = el('unifi-state');
+    const err = el('unifi-error');
+    if (!state) return;
+
+    if (!data.configured) {
+      state.textContent = 'not configured';
+      state.className = 'badge badge-gray';
+      if (err) { err.textContent = data.error || 'UniFi not configured'; err.style.display = ''; }
+      return;
+    }
+    if (el('unifi-site')) el('unifi-site').textContent = data.site || '-';
+    if (el('unifi-wan')) el('unifi-wan').textContent = String(data.wan_down ?? '-');
+    if (el('unifi-devices')) el('unifi-devices').textContent = `${data.devices_down ?? '-'} down / ${data.devices_total ?? '-'}`;
+    if (el('unifi-clients')) el('unifi-clients').textContent = String(data.clients ?? '-');
+
+    if (data.up) {
+      state.textContent = 'connected'; state.className = 'badge badge-green';
+      if (err) err.style.display = 'none';
+    } else {
+      state.textContent = 'error'; state.className = 'badge badge-yellow';
+      if (err) { err.textContent = data.error || 'Failed to query UniFi API'; err.style.display = ''; }
+    }
+  } catch (_) {}
+}
+
+async function refresh() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Refreshing…'; }
+  // trigger a live check, then reload state
+  try { await fetch('/api/status?refresh=1'); } catch (_) {}
+  await Promise.all([loadOps(), loadUnifi()]);
+  if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+}
+
+document.getElementById('refresh-btn')?.addEventListener('click', refresh);
+document.addEventListener('DOMContentLoaded', () => Promise.all([loadOps(), loadUnifi()]));
+</script>
+{% endblock %}

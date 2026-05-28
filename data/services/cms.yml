@@ -1,0 +1,21 @@
+slug: cms
+name: CMS
+group: Imported
+description: Imported from Nginx Proxy Manager
+tags:
+- imported
+network:
+  vlan: '10'
+  ip: 10.0.50.14
+  dns:
+  - cms.eckman.solutions
+  domains: []
+backend:
+  scheme: http
+  port: 3000
+exposure:
+  homepage: false
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+active: false

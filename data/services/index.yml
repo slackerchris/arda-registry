@@ -1,0 +1,33 @@
+slug: index
+name: Prowlarr
+app: simple-icons:prowlarr
+group: Media & Automation
+description: Indexer management
+tags:
+- search
+network:
+  vlan: '10'
+  ip: 10.0.50.12
+  dns:
+  - index.middl.earth
+  domains: []
+backend:
+  scheme: http
+  port: 9696
+exposure:
+  homepage: true
+  reverse_proxy: true
+  public: false
+  force_ssl: false
+runtime:
+  type: lxc
+  host: helmsdeep
+  container_id: 400
+  gpu: false
+api:
+  base_url: https://index.middl.earth
+  key: $PROWLARR_API_KEY
+  key_header: X-Api-Key
+  status_path: /api/v1/health
+  verify_ssl: false
+active: true

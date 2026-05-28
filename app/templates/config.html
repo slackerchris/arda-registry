@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Config</h1>
+
+{% if flash_error %}
+<div class="alert alert-danger" style="margin-bottom:16px;">{{ flash_error }}</div>
+{% endif %}
+{% if flash_config_action %}
+<div class="alert" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; margin-bottom:16px;">
+  Config <strong>{{ flash_config_target }}</strong> {{ flash_config_action }}.
+</div>
+{% endif %}
+{% if flash_imported is not none %}
+<div class="alert" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; margin-bottom:16px;">
+  Imported <strong>{{ flash_imported }}</strong> service(s) from NPM{% if flash_skipped %}, skipped <strong>{{ flash_skipped }}</strong> already existing{% endif %}.
+</div>
+{% endif %}
+{% if flash_synced is not none %}
+<div class="alert" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; margin-bottom:16px;">
+  NPM sync: <strong>{{ flash_synced }}</strong> updated{% if flash_created %}, <strong>{{ flash_created }}</strong> created{% endif %}{% if flash_skipped %}, <strong>{{ flash_skipped }}</strong> skipped{% endif %}.
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <p class="section-title" style="margin-bottom:14px;">Generators</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <form method="post" action="/render/mafl">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost">Render Mafl</button>
+      </form>
+      <form method="post" action="/sync/mafl" onsubmit="return confirm('Write Mafl config to the NAS landing zone?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost">Deploy Mafl</button>
+      </form>
+      <form method="post" action="/render/monitoring">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost">Render Monitoring</button>
+      </form>
+      <form method="post" action="/render/ansible">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost">Render Ansible</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <p class="section-title" style="margin-bottom:0;">Nginx Proxy Manager</p>
+      {% if not npm_configured %}
+      <span style="font-size:12px; color:#9ca3af;">NPM credentials not set (NPM_URL, NPM_EMAIL, NPM_PASSWORD)</span>
+      {% else %}
+      <span style="font-size:12px; color:#16a34a;">NPM configured</span>
+      {% endif %}
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <form method="post" action="/import/npm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" {% if not npm_configured %}disabled title="Configure NPM credentials first"{% endif %}>↓ Import new from NPM</button>
+      </form>
+      <form method="post" action="/sync/npm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" {% if not npm_configured %}disabled title="Configure NPM credentials first"{% endif %}>↻ Sync NPM</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-body">
+    <p class="section-title" style="margin-bottom:14px;">Rename Group</p>
+    <form method="post" action="/services/rename-group" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label>Old group name</label>
+        <input type="text" name="old_group" placeholder="Infrastructure" style="width:180px;">
+      </div>
+      <div class="field">
+        <label>New group name</label>
+        <input type="text" name="new_group" placeholder="Infra" style="width:180px;">
+      </div>
+      <button type="submit" class="btn btn-ghost">Rename</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="section-title" style="margin-bottom:14px;">Backup & Restore</p>
+    <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div>
+        <p style="font-size:12px; color:#6b7280; margin-bottom:8px;">Download a ZIP of all service configs and integrations.</p>
+        <a href="/backup/download" class="btn btn-ghost">↓ Download Backup</a>
+      </div>
+
+      <div style="flex:1; min-width:260px;">
+        <p style="font-size:12px; color:#6b7280; margin-bottom:8px;">Restore from a previous backup. <strong>This overwrites all current data.</strong></p>
+        <form method="post" action="/backup/restore" enctype="multipart/form-data"
+              style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"
+              onsubmit="return confirm('Restore backup? This will overwrite all current service configs.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="file" name="file" accept=".zip" required
+                 style="font-size:12px; color:#374151;">
+          <button type="submit" class="btn btn-ghost" style="white-space:nowrap;">↑ Restore</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+  <a href="/" class="btn btn-ghost" style="padding:6px 10px;">← Back</a>
+  <h1 style="margin:0;">{% if edit_mode %}Edit Service{% else %}Add Service{% endif %}</h1>
+</div>
+
+{% if errors %}
+<div class="alert alert-danger">
+  <strong>Please fix the following errors:</strong>
+  <ul>
+    {% for error in errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<form method="post" action="{% if edit_mode %}/services/{{ slug }}/edit{% else %}/services/new{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <!-- ── Basic Info ── -->
+  <div class="form-section">
+    <div class="section-title">Basic Info</div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="slug">Slug {% if not edit_mode %}<span style="color:#dc2626;">*</span>{% endif %}</label>
+        <input type="text" id="slug" name="slug"
+               value="{{ form_data.get('slug', '') }}"
+               {% if edit_mode %}readonly style="background:#f9fafb; color:#6b7280; cursor:not-allowed;"{% else %}required placeholder="jellyfin"{% endif %} />
+        <span class="hint">{% if edit_mode %}Slug cannot be changed after creation.{% else %}Unique identifier — used as the filename.{% endif %}</span>
+      </div>
+      <div class="field">
+        <label for="name">Name <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="name" name="name" required placeholder="Jellyfin"
+               value="{{ form_data.get('name', '') }}" />
+      </div>
+      <div class="field">
+        <label for="group">Group <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="group" name="group" required placeholder="Media"
+               value="{{ form_data.get('group', '') }}" />
+      </div>
+      <div class="field">
+        <label for="app">App</label>
+        <input type="text" id="app" name="app" placeholder="radarr"
+               value="{{ form_data.get('app', '') }}" />
+        <span class="hint">Canonical app name for icons (e.g. radarr, sonarr). Defaults to slug.</span>
+      </div>
+      <div class="field">
+        <label for="tags">Tags</label>
+        <input type="text" id="tags" name="tags" placeholder="media, proxy, family"
+               value="{{ form_data.get('tags', '') }}" />
+        <span class="hint">Comma-separated.</span>
+      </div>
+    </div>
+    <div class="field mt-3">
+      <label for="description">Description <span style="color:#dc2626;">*</span></label>
+      <input type="text" id="description" name="description" required placeholder="Family media server"
+             value="{{ form_data.get('description', '') }}" />
+    </div>
+  </div>
+
+  <!-- ── Network ── -->
+  <div class="form-section">
+    <div class="section-title">Network</div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="network_vlan">VLAN <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="network_vlan" name="network_vlan" required placeholder="media"
+               value="{{ form_data.get('network_vlan', '') }}" />
+      </div>
+      <div class="field">
+        <label for="network_ip">IP Address <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="network_ip" name="network_ip" required placeholder="10.0.20.55"
+               value="{{ form_data.get('network_ip', '') }}" />
+      </div>
+    </div>
+    <div class="field mt-3">
+      <label>Domains</label>
+      <input type="hidden" id="network_domains_json" name="network_domains_json"
+             value="{{ form_data.get('network_domains_json', '[]')|e }}" />
+      <div id="domain-entries" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <button type="button" id="add-domain-entry" class="btn btn-ghost" style="margin-top:8px; width:max-content;">+ Add Domain</button>
+      <span class="hint">Use usage tags like `public`, `internal`, `health`, `api`, `dashboard`, or `host`.</span>
+    </div>
+  </div>
+
+  <!-- ── Backend ── -->
+  <div class="form-section">
+    <div class="section-title">Backend</div>
+    <div class="grid-3">
+      <div class="field">
+        <label for="backend_scheme">Scheme <span style="color:#dc2626;">*</span></label>
+        <select id="backend_scheme" name="backend_scheme">
+          <option value="http"  {% if form_data.get('backend_scheme', 'http') == 'http'  %}selected{% endif %}>http</option>
+          <option value="https" {% if form_data.get('backend_scheme') == 'https' %}selected{% endif %}>https</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="backend_port">Port <span style="color:#dc2626;">*</span></label>
+        <input type="number" id="backend_port" name="backend_port" required min="1" max="65535"
+               placeholder="8096" value="{{ form_data.get('backend_port', '') }}" />
+      </div>
+      <div class="field">
+        <label for="backend_health_path">Health Path</label>
+        <input type="text" id="backend_health_path" name="backend_health_path" placeholder="/health"
+               value="{{ form_data.get('backend_health_path', '') }}" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Exposure ── -->
+  <div class="form-section">
+    <div class="section-title">Exposure</div>
+    <div class="checkboxes">
+      <label class="checkbox-row">
+        <input type="checkbox" name="exposure_homepage"
+               {% if form_data.get('exposure_homepage') %}checked{% endif %} />
+        Show on Homepage
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="exposure_reverse_proxy"
+               {% if form_data.get('exposure_reverse_proxy') %}checked{% endif %} />
+        Reverse Proxy
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="exposure_public"
+               {% if form_data.get('exposure_public') %}checked{% endif %} />
+        Public
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="exposure_force_ssl"
+               {% if not form_data or 'exposure_force_ssl' in form_data %}checked{% endif %} />
+        Force SSL
+      </label>
+    </div>
+  </div>
+
+  <!-- ── API (optional) ── -->
+  <div class="form-section">
+    <details {% if form_data.get('api_key') or form_data.get('api_base_url') %}open{% endif %}>
+      <summary>API</summary>
+      <div class="grid-2">
+        <div class="field">
+          <label for="api_base_url">Base URL</label>
+          <input type="text" id="api_base_url" name="api_base_url"
+                 placeholder="https://sonarr.example.com/api/v3"
+                 value="{{ form_data.get('api_base_url', '') }}" />
+          <span class="hint">Defaults to the service URL if blank.</span>
+        </div>
+        <div class="field">
+          <label for="api_status_path">Status Path</label>
+          <input type="text" id="api_status_path" name="api_status_path"
+                 placeholder="/system/status"
+                 value="{{ form_data.get('api_status_path', '') }}" />
+          <span class="hint">Path to hit for live health checks.</span>
+        </div>
+        <div class="field">
+          <label for="api_key">API Key</label>
+          <input type="text" id="api_key" name="api_key"
+                 placeholder="abc123 or $SONARR_API_KEY"
+                 value="{{ form_data.get('api_key', '') }}" />
+          <span class="hint">Use <code>$ENV_VAR</code> to reference an environment variable.</span>
+        </div>
+        <div class="field">
+          <label for="api_key_header_select">Key Header</label>
+          <select id="api_key_header_select">
+            <option value="">— none —</option>
+            <option value="X-Api-Key">X-Api-Key</option>
+            <option value="Authorization">Authorization</option>
+            <option value="X-API-Key">X-API-Key</option>
+            <option value="__custom__">Custom…</option>
+          </select>
+          <input type="text" id="api_key_header_custom"
+                 placeholder="My-Custom-Header"
+                 style="display:none; margin-top:6px;" />
+          <input type="hidden" name="api_key_header" id="api_key_header"
+                 value="{{ form_data.get('api_key_header', '') }}" />
+        </div>
+        <div class="field">
+          <label for="api_key_prefix">Key Prefix</label>
+          <input type="text" id="api_key_prefix" name="api_key_prefix"
+                 placeholder="Bearer"
+                 value="{{ form_data.get('api_key_prefix', '') }}" />
+          <span class="hint">Optional auth scheme, for example <code>Bearer</code>.</span>
+        </div>
+        <div class="field" style="grid-column:1 / span 2;">
+          <label class="checkbox-row" style="text-transform:none; letter-spacing:0;">
+            <input type="checkbox" name="api_verify_ssl"
+                   {% if not form_data or form_data.get('api_verify_ssl') %}checked{% endif %} />
+            Verify SSL certificate
+          </label>
+          <span class="hint">Disable only for self-signed/internal certs.</span>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Monitoring (optional) ── -->
+  <div class="form-section">
+    <details {% if form_data.get('monitoring_enabled') %}open{% endif %}>
+      <summary>Monitoring</summary>
+      <div class="grid-2">
+        <div class="field">
+          <label class="checkbox-row" style="text-transform:none; letter-spacing:0;">
+            <input type="checkbox" name="monitoring_enabled"
+                   {% if form_data.get('monitoring_enabled') %}checked{% endif %} />
+            Enable monitoring
+          </label>
+        </div>
+        <div class="field">
+          <label for="monitoring_type">Type</label>
+          <select id="monitoring_type" name="monitoring_type">
+            <option value="http" {% if form_data.get('monitoring_type', 'http') == 'http' %}selected{% endif %}>http</option>
+            <option value="tcp"  {% if form_data.get('monitoring_type') == 'tcp'  %}selected{% endif %}>tcp</option>
+            <option value="ping" {% if form_data.get('monitoring_type') == 'ping' %}selected{% endif %}>ping</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="checkbox-row" style="text-transform:none; letter-spacing:0;">
+            <input type="checkbox" name="monitoring_maintenance"
+                   {% if form_data.get('monitoring_maintenance') %}checked{% endif %} />
+            Maintenance mode
+          </label>
+        </div>
+        <div class="field">
+          <label for="monitoring_maintenance_reason">Maintenance reason</label>
+          <input type="text" id="monitoring_maintenance_reason" name="monitoring_maintenance_reason"
+                 placeholder="Planned maintenance"
+                 value="{{ form_data.get('monitoring_maintenance_reason', '') }}" />
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Runtime (optional) ── -->
+  <div class="form-section">
+    <details {% if form_data.get('runtime_type') %}open{% endif %}>
+      <summary>Runtime</summary>
+      <div class="grid-2">
+        <div class="field">
+          <label for="runtime_type">Type</label>
+          <select id="runtime_type" name="runtime_type">
+            <option value="">— none —</option>
+            <option value="lxc"    {% if form_data.get('runtime_type') == 'lxc'    %}selected{% endif %}>LXC</option>
+            <option value="vm"     {% if form_data.get('runtime_type') == 'vm'     %}selected{% endif %}>VM</option>
+            <option value="docker" {% if form_data.get('runtime_type') == 'docker' %}selected{% endif %}>Docker</option>
+            <option value="bare"   {% if form_data.get('runtime_type') == 'bare'   %}selected{% endif %}>Bare Metal</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="runtime_host">Host</label>
+          <input type="text" id="runtime_host" name="runtime_host" placeholder="helmsdeep"
+                 value="{{ form_data.get('runtime_host', '') }}" />
+        </div>
+        <div class="field">
+          <label for="runtime_container_id">LXC / VM ID</label>
+          <input type="number" id="runtime_container_id" name="runtime_container_id" placeholder="116"
+                 value="{{ form_data.get('runtime_container_id', '') }}" />
+          <span class="hint">Proxmox vmid of the LXC (required for LXC + Docker types).</span>
+        </div>
+        <div class="field">
+          <label for="runtime_container_name">Docker Container Name</label>
+          <input type="text" id="runtime_container_name" name="runtime_container_name" placeholder="jellyfin"
+                 value="{{ form_data.get('runtime_container_name', '') }}" />
+          <span class="hint">Only for Docker type — name of the container inside the LXC.</span>
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <label class="checkbox-row" style="text-transform:none; letter-spacing:0; margin-top:22px;">
+            <input type="checkbox" name="runtime_gpu"
+                   {% if form_data.get('runtime_gpu') %}checked{% endif %} />
+            GPU passthrough
+          </label>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Backup (optional) ── -->
+  <div class="form-section">
+    <details>
+      <summary>Backup</summary>
+      <div class="checkboxes">
+        <label class="checkbox-row">
+          <input type="checkbox" name="backup_config"
+                 {% if not form_data or 'backup_config' in form_data %}checked{% endif %} />
+          Backup config
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="backup_data"
+                 {% if form_data.get('backup_data') %}checked{% endif %} />
+          Backup data
+        </label>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Notes (optional) ── -->
+  <div class="form-section">
+    <details {% if form_data.get('notes') %}open{% endif %}>
+      <summary>Notes</summary>
+      <div class="field">
+        <textarea id="notes" name="notes"
+                  placeholder="Anything worth knowing about this service…">{{ form_data.get('notes', '') }}</textarea>
+      </div>
+    </details>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save Service</button>
+    <a href="/" class="btn btn-ghost">Cancel</a>
+    {% if edit_mode %}
+    <span style="flex:1;"></span>
+    <button type="button" class="btn" id="delete-btn"
+            style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;">Delete Service</button>
+    {% endif %}
+  </div>
+
+</form>
+
+{% if edit_mode %}
+<div id="delete-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:28px 32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <p style="font-size:16px; font-weight:600; margin:0 0 8px;">Delete <span style="font-family:monospace; color:#dc2626;">{{ slug }}</span>?</p>
+    <p style="font-size:13px; color:#6b7280; margin:0 0 20px;">This removes the service file permanently. Type the slug to confirm.</p>
+    <input type="text" id="delete-confirm-input" placeholder="{{ slug }}"
+           style="width:100%; box-sizing:border-box; font-family:monospace; font-size:14px; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; margin-bottom:16px;">
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" id="delete-cancel-btn" class="btn btn-ghost">Cancel</button>
+      <form method="post" action="/services/{{ slug }}/delete" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" id="delete-confirm-btn" class="btn" disabled
+                style="background:#dc2626; color:#fff; opacity:0.4; cursor:not-allowed;">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  const modal   = document.getElementById('delete-modal');
+  const input   = document.getElementById('delete-confirm-input');
+  const confirm = document.getElementById('delete-confirm-btn');
+  const slug    = '{{ slug }}';
+
+  document.getElementById('delete-btn').addEventListener('click', () => {
+    input.value = '';
+    confirm.disabled = true;
+    confirm.style.opacity = '0.4';
+    confirm.style.cursor = 'not-allowed';
+    modal.style.display = 'flex';
+    input.focus();
+  });
+
+  document.getElementById('delete-cancel-btn').addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+
+  input.addEventListener('input', () => {
+    const match = input.value.trim() === slug;
+    confirm.disabled = !match;
+    confirm.style.opacity = match ? '1' : '0.4';
+    confirm.style.cursor = match ? 'pointer' : 'not-allowed';
+  });
+})();
+</script>
+{% endif %}
+
+<template id="domain-entry-template">
+  <div class="domain-entry" style="display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap:8px; align-items:end;">
+    <div class="field" style="margin:0;">
+      <label style="font-size:10px;">Name</label>
+      <input type="text" data-domain-name placeholder="app.middl.earth" />
+    </div>
+    <div class="field" style="margin:0;">
+      <label style="font-size:10px;">Usage</label>
+      <select data-domain-usage>
+        <option value="">(none)</option>
+        <option value="public">public</option>
+        <option value="internal">internal</option>
+        <option value="health">health</option>
+        <option value="api">api</option>
+        <option value="dashboard">dashboard</option>
+        <option value="service">service</option>
+        <option value="external">external</option>
+        <option value="host">host</option>
+        <option value="node">node</option>
+        <option value="box">box</option>
+        <option value="machine">machine</option>
+      </select>
+    </div>
+    <div class="field" style="margin:0;">
+      <label style="font-size:10px;">Note</label>
+      <input type="text" data-domain-note placeholder="optional" />
+    </div>
+    <button type="button" data-domain-remove class="btn btn-ghost" style="height:36px; padding:4px 10px;">Remove</button>
+  </div>
+</template>
+
+<script>
+(function () {
+  // ── Key Header select + custom input ──
+  const knownHeaders = ['', 'X-Api-Key', 'Authorization', 'X-API-Key'];
+  const headerSelect = document.getElementById('api_key_header_select');
+  const headerCustom = document.getElementById('api_key_header_custom');
+  const headerHidden = document.getElementById('api_key_header');
+
+  function syncHeaderHidden() {
+    headerHidden.value = headerSelect.value === '__custom__'
+      ? headerCustom.value.trim()
+      : headerSelect.value;
+  }
+
+  function initHeaderSelect() {
+    const current = headerHidden.value;
+    if (knownHeaders.includes(current)) {
+      headerSelect.value = current;
+      headerCustom.style.display = 'none';
+    } else if (current) {
+      headerSelect.value = '__custom__';
+      headerCustom.value = current;
+      headerCustom.style.display = '';
+    } else {
+      headerSelect.value = '';
+      headerCustom.style.display = 'none';
+    }
+  }
+
+  if (headerSelect && headerCustom && headerHidden) {
+    initHeaderSelect();
+    headerSelect.addEventListener('change', () => {
+      headerCustom.style.display = headerSelect.value === '__custom__' ? '' : 'none';
+      if (headerSelect.value !== '__custom__') headerCustom.value = '';
+      syncHeaderHidden();
+    });
+    headerCustom.addEventListener('input', syncHeaderHidden);
+  }
+}());
+
+(function () {
+  const container = document.getElementById('domain-entries');
+  const addButton = document.getElementById('add-domain-entry');
+  const hiddenInput = document.getElementById('network_domains_json');
+  const template = document.getElementById('domain-entry-template');
+  if (!container || !addButton || !hiddenInput || !template) return;
+
+  let initialEntries = [];
+  try {
+    const parsed = JSON.parse(hiddenInput.value || '[]');
+    if (Array.isArray(parsed)) initialEntries = parsed;
+  } catch (_) {}
+
+  function syncHidden() {
+    const entries = Array.from(container.querySelectorAll('.domain-entry')).map((row) => ({
+      name: row.querySelector('[data-domain-name]')?.value.trim() || '',
+      usage: row.querySelector('[data-domain-usage]')?.value.trim() || '',
+      note: row.querySelector('[data-domain-note]')?.value.trim() || '',
+    })).filter((entry) => entry.name);
+    hiddenInput.value = JSON.stringify(entries);
+  }
+
+  function bindRow(row) {
+    row.querySelectorAll('input').forEach((input) => {
+      input.addEventListener('input', syncHidden);
+    });
+    row.querySelector('[data-domain-remove]')?.addEventListener('click', () => {
+      row.remove();
+      if (!container.children.length) addRow();
+      syncHidden();
+    });
+  }
+
+  function addRow(entry = {}) {
+    const fragment = template.content.cloneNode(true);
+    const row = fragment.querySelector('.domain-entry');
+    row.querySelector('[data-domain-name]').value = entry.name || '';
+    const usageSelect = row.querySelector('[data-domain-usage]');
+    const usageValue = (entry.usage || '').trim();
+    if (usageSelect) {
+      const optionValues = Array.from(usageSelect.options).map((opt) => opt.value);
+      if (usageValue && !optionValues.includes(usageValue)) {
+        const custom = document.createElement('option');
+        custom.value = usageValue;
+        custom.textContent = `${usageValue} (custom)`;
+        usageSelect.appendChild(custom);
+      }
+      usageSelect.value = usageValue;
+    }
+    row.querySelector('[data-domain-note]').value = entry.note || '';
+    bindRow(row);
+    container.appendChild(row);
+    syncHidden();
+  }
+
+  if (initialEntries.length) {
+    initialEntries.forEach(addRow);
+  } else {
+    addRow();
+  }
+
+  addButton.addEventListener('click', () => addRow());
+}());
+</script>
+{% endblock %}

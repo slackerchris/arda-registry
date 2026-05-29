@@ -367,7 +367,7 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("lxc_action=restart", resp.headers["location"])
         action.assert_called_once()
 
-    def test_mafl_renderer_preserves_grouped_config_shape(self):
+    def test_mafl_renderer_defaults_to_flat_config_shape(self):
         source = Path(self.tmp.name) / "mafl.yml"
         output = Path(self.tmp.name) / "rendered.yml"
         source.write_text(
@@ -385,6 +385,28 @@ class HardeningTests(unittest.TestCase):
 
         rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
         self.assertEqual(rendered["title"], "Middle Earth Labs")
+        self.assertIsInstance(rendered["services"], list)
+        self.assertEqual(rendered["services"][0]["title"], "Proxmox VE")
+
+    def test_mafl_renderer_can_preserve_grouped_config_shape(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        output = Path(self.tmp.name) / "rendered.yml"
+        source.write_text(
+            yaml.dump(
+                {
+                    "title": "Middle Earth Labs",
+                    "services": {"Infrastructure": [{"title": "Proxmox VE", "link": "https://pve/"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+        integrations = IntegrationsConfig(
+            mafl={"source_path": str(source), "output_path": str(output), "services_layout": "grouped"}
+        )
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            render_mafl([])
+
+        rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
         self.assertIsInstance(rendered["services"], dict)
         self.assertEqual(rendered["services"]["Infrastructure"][0]["title"], "Proxmox VE")
 
@@ -403,7 +425,9 @@ class HardeningTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        integrations = IntegrationsConfig(mafl={"source_path": str(source), "output_path": str(output)})
+        integrations = IntegrationsConfig(
+            mafl={"source_path": str(source), "output_path": str(output), "services_layout": "grouped"}
+        )
         with patch("app.generators.mafl.load_integrations", return_value=integrations):
             render_mafl([])
 

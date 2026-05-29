@@ -82,6 +82,27 @@ def _remove_empty_service_groups(config: dict) -> None:
             del groups[group_name]
 
 
+def _flatten_service_groups(config: dict) -> None:
+    groups = config.get("services")
+    if not isinstance(groups, dict):
+        return
+    services: list[dict] = []
+    for items in groups.values():
+        if not isinstance(items, list):
+            continue
+        services.extend(item for item in items if isinstance(item, dict))
+    config["services"] = services
+
+
+def _service_count(config: dict) -> int:
+    services = config.get("services", {})
+    if isinstance(services, list):
+        return len(services)
+    if isinstance(services, dict):
+        return sum(len(items) for items in services.values() if isinstance(items, list))
+    return 0
+
+
 def _write_rendered_config(config: dict, output_file: Path) -> None:
     try:
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -108,12 +129,15 @@ def render_mafl(
 
     config = _load_base_config(source)
     rendered = _merge_registry_services(config, services)
-    _remove_empty_service_groups(config)
+    if mafl.services_layout == "flat":
+        _flatten_service_groups(config)
+    else:
+        _remove_empty_service_groups(config)
 
     output_file = Path(output)
     _write_rendered_config(config, output_file)
 
-    total = sum(len(items) for items in config.get("services", {}).values() if isinstance(items, list))
+    total = _service_count(config)
     print(f"Rendered Mafl config to {output} with {total} services.")
     if rendered:
         print(f"Updated {rendered} registry-managed dashboard service(s).")

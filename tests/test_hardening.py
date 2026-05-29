@@ -367,7 +367,7 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("lxc_action=restart", resp.headers["location"])
         action.assert_called_once()
 
-    def test_mafl_renderer_defaults_to_safe_grouped_config_shape(self):
+    def test_mafl_renderer_defaults_to_grouped_config_shape(self):
         source = Path(self.tmp.name) / "mafl.yml"
         output = Path(self.tmp.name) / "rendered.yml"
         source.write_text(
@@ -389,8 +389,29 @@ class HardeningTests(unittest.TestCase):
         rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
         self.assertEqual(rendered["title"], "Middle Earth Labs")
         self.assertIsInstance(rendered["services"], dict)
-        self.assertIn("AI and Development", rendered["services"])
+        self.assertIn("AI & Development", rendered["services"])
         self.assertEqual(rendered["services"]["Infrastructure"][0]["title"], "Proxmox VE")
+
+    def test_mafl_renderer_uses_safe_default_icon_for_unknown_apps(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        output = Path(self.tmp.name) / "rendered.yml"
+        source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
+        service = ServiceRecord(
+            **valid_service(
+                slug="bookscout",
+                name="Bookscout",
+                group="Media & Automation",
+                description="Imported from Nginx Proxy Manager",
+                exposure={"homepage": True, "reverse_proxy": True, "public": False},
+            )
+        )
+        integrations = IntegrationsConfig(mafl={"source_path": str(source), "output_path": str(output)})
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            render_mafl([service])
+
+        rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
+        item = rendered["services"]["Media & Automation"][0]
+        self.assertEqual(item["icon"]["name"], "mdi:web")
 
     def test_mafl_renderer_can_emit_flat_config_shape(self):
         source = Path(self.tmp.name) / "mafl.yml"

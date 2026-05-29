@@ -59,7 +59,7 @@ class MaflDeployConfig(BaseModel):
 class MaflIntegrationConfig(BaseModel):
     source_path: str = "data/mafl.yml"
     output_path: str = "output/mafl/config.yml"
-    services_layout: Literal["flat", "grouped", "grouped_safe"] = "grouped_safe"
+    services_layout: Literal["flat", "grouped", "grouped_safe"] = "grouped"
     deploy: MaflDeployConfig = Field(default_factory=MaflDeployConfig)
 
 

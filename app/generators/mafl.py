@@ -8,6 +8,8 @@ import yaml
 from app.integrations import load_integrations
 from app.models import ServiceRecord
 
+DEFAULT_ICON = "mdi:web"
+
 
 class MaflYamlDumper(yaml.SafeDumper):
     def increase_indent(self, flow=False, indentless=False):
@@ -43,9 +45,9 @@ def _service_link(svc: ServiceRecord) -> str:
 
 
 def _service_item(svc: ServiceRecord) -> dict:
-    icon_name = svc.app or svc.slug
+    icon_name = svc.app or DEFAULT_ICON
     if ":" not in icon_name:
-        icon_name = f"mdi:{icon_name}"
+        icon_name = DEFAULT_ICON
     item = {
         "title": svc.name,
         "description": svc.description,

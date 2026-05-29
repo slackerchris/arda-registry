@@ -30,7 +30,7 @@ from app.models import SLUG_RE, ServiceRecord
 from app.proxmox import ProxmoxError, get_power_status, run_docker_action, run_lxc_action, run_vm_action
 from app.registry import Registry
 
-APP_VERSION = "0.1.8"
+APP_VERSION = "0.1.9"
 
 app = FastAPI(title="Arda Registry")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -47,6 +47,7 @@ OPS_CHECK_RETRY_DELAY_SECONDS = float(os.environ.get("OPS_CHECK_RETRY_DELAY_SECO
 OPS_CHECK_TIMEOUT_SECONDS = float(os.environ.get("OPS_CHECK_TIMEOUT_SECONDS", "5.0"))
 OPS_LOG_FILE = Path("output/logs/ops_health.log")
 CSRF_TOKEN = secrets.token_urlsafe(32)
+POWER_STATUS_CACHE: dict = {"timestamp": None, "services": {}}
 
 ops_logger = logging.getLogger("arda.ops.health")
 app_logger = logging.getLogger("arda.app")
@@ -307,6 +308,28 @@ def _save_ops_state(state: dict) -> None:
     OPS_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(OPS_STATE_FILE, "w") as f:
         json.dump(state, f, indent=2)
+
+
+def _cached_service_statuses(checkable: list[ServiceRecord], services_state: dict, latest: dict | None) -> dict:
+    cached: dict = {}
+    stale = latest is None or _seconds_since_iso(latest.get("timestamp")) >= OPS_CHECK_MIN_SECONDS
+    for svc in checkable:
+        previous = services_state.get(svc.slug, {})
+        status_text = previous.get("status", "unknown")
+        cached[svc.slug] = {
+            "up": status_text == "up",
+            "status": status_text,
+            "status_code": previous.get("status_code"),
+            "error": previous.get("error"),
+            "maintenance": bool(previous.get("maintenance")),
+            "maintenance_reason": previous.get("maintenance_reason") or "",
+            "up_since": previous.get("up_since"),
+            "last_checked": previous.get("last_checked"),
+            "last_down": previous.get("last_down"),
+            "cached": True,
+            "stale": stale,
+        }
+    return cached
 
 
 def _load_registry() -> Registry:
@@ -874,24 +897,10 @@ async def service_status(request: Request):
     latest = history[-1] if history else None
     force_refresh = request.query_params.get("refresh") == "1"
 
-    # Serve cached statuses if checks ran recently, unless forced.
-    if not force_refresh and latest and _seconds_since_iso(latest.get("timestamp")) < OPS_CHECK_MIN_SECONDS:
-        cached: dict = {}
-        for svc in checkable:
-            previous = services_state.get(svc.slug, {})
-            status_text = previous.get("status", "down")
-            cached[svc.slug] = {
-                "up": status_text == "up",
-                "status": status_text,
-                "status_code": previous.get("status_code"),
-                "error": previous.get("error"),
-                "maintenance": bool(previous.get("maintenance")),
-                "maintenance_reason": previous.get("maintenance_reason") or "",
-                "up_since": previous.get("up_since"),
-                "last_checked": previous.get("last_checked"),
-                "last_down": previous.get("last_down"),
-                "cached": True,
-            }
+    # The index page should stay snappy: serve cached or unknown statuses unless
+    # the caller explicitly asks for live checks.
+    if not force_refresh:
+        cached = _cached_service_statuses(checkable, services_state, latest)
         _health_log(
             "status_cache_hit",
             checked=len(checkable),
@@ -1072,7 +1081,7 @@ async def unifi_summary():
 
 
 @app.get("/api/proxmox/status")
-async def proxmox_power_status():
+async def proxmox_power_status(request: Request):
     registry = _load_registry()
     checkable = [
         s for s in registry.services
@@ -1080,6 +1089,13 @@ async def proxmox_power_status():
     ]
     if not checkable:
         return {}
+    force_refresh = request.query_params.get("refresh") == "1"
+    if not force_refresh:
+        cached_services = POWER_STATUS_CACHE.get("services", {})
+        return {
+            svc.slug: cached_services.get(svc.slug, {"power": "unknown", "cached": True})
+            for svc in checkable
+        }
     services_list = list(registry.services)
 
     async def _check(svc):
@@ -1089,8 +1105,10 @@ async def proxmox_power_status():
         except Exception as exc:
             return svc.slug, {"power": "unknown", "error": str(exc)[:80]}
 
-    results = await asyncio.gather(*[_check(s) for s in checkable])
-    return dict(results)
+    results = dict(await asyncio.gather(*[_check(s) for s in checkable]))
+    POWER_STATUS_CACHE["timestamp"] = _now_iso()
+    POWER_STATUS_CACHE["services"] = results
+    return results
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):

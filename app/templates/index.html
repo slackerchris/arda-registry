@@ -283,6 +283,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.style.background = '#f59e0b';
         el.title = status.maintenance_reason || 'Maintenance mode';
         if (card) card.dataset.statusSort = '1';
+      } else if (status.status === 'unknown') {
+        el.style.background = '#9ca3af';
+        el.title = 'Unknown (not checked yet)';
+        if (card) card.dataset.statusSort = '3';
       } else {
         el.style.background = status.up ? '#22c55e' : '#ef4444';
         el.title = status.up

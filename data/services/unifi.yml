@@ -21,9 +21,9 @@ exposure:
   public: false
   force_ssl: false
 api:
-  base_url: https://unifi.local
+  base_url: https://10.0.0.1
   key: $UNIFI_API_TOKEN
-  key_header: X-Api-Key
+  key_header: X-API-KEY
   status_path: /proxy/network/api/s/default/stat/device
   verify_ssl: false
 active: true

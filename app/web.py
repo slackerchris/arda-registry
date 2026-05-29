@@ -30,7 +30,7 @@ from app.models import SLUG_RE, ServiceRecord
 from app.proxmox import ProxmoxError, get_power_status, run_docker_action, run_lxc_action, run_vm_action
 from app.registry import Registry
 
-APP_VERSION = "0.1.7"
+APP_VERSION = "0.1.8"
 
 app = FastAPI(title="Arda Registry")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -725,7 +725,11 @@ async def _fetch_unifi_summary() -> dict:
             svc_token_header = unifi_svc.api.key_header
 
     unifi_url = (os.environ.get("UNIFI_URL", "").strip().rstrip("/") or svc_url)
-    api_token = os.environ.get("UNIFI_API_TOKEN", "").strip() or svc_token
+    api_token = (
+        os.environ.get("UNIFI_API_TOKEN", "").strip()
+        or os.environ.get("UNIFI_API_KEY", "").strip()
+        or svc_token
+    )
     token_header = os.environ.get("UNIFI_API_HEADER", "").strip() or svc_token_header
     username = os.environ.get("UNIFI_USERNAME", "").strip()
     password = os.environ.get("UNIFI_PASSWORD", "").strip()

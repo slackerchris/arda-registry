@@ -268,6 +268,56 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(headers["Authorization"], "PVEAPIToken=ansible@pve!arda=secret")
         self.assertFalse(verify_ssl)
 
+    def test_unifi_api_key_alias_is_used_for_ops_summary(self):
+        web.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        service = valid_service(
+            slug="unifi",
+            name="UniFi Controller",
+            network={"vlan": "0", "ip": "10.0.0.1", "dns": ["unifi.local"]},
+            backend={"scheme": "https", "port": 443},
+            api={
+                "base_url": "https://10.0.0.1",
+                "key": "$UNIFI_API_TOKEN",
+                "key_header": "X-API-KEY",
+                "status_path": "/proxy/network/api/s/default/stat/device",
+                "verify_ssl": False,
+            },
+        )
+        (web.DATA_DIR / "unifi.yml").write_text(yaml.dump(service), encoding="utf-8")
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"data": []}
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                self.headers = {}
+                self.urls = []
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                return False
+
+            async def get(self, url, **kwargs):
+                self.urls.append(url)
+                return FakeResponse()
+
+        fake_client = FakeClient()
+        with patch.dict("os.environ", {"UNIFI_API_KEY": "alias-secret"}, clear=False):
+            with patch("app.web.httpx.AsyncClient", return_value=fake_client):
+                import asyncio
+
+                result = asyncio.run(web._fetch_unifi_summary())
+
+        self.assertTrue(result["up"])
+        self.assertEqual(fake_client.headers["X-API-KEY"], "alias-secret")
+        self.assertTrue(all(url.startswith("https://10.0.0.1/") for url in fake_client.urls))
+
     def test_auth_failure_status_codes_are_down(self):
         class FakeResponse:
             status_code = 401

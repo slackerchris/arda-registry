@@ -1,6 +1,6 @@
 services:
   arda-registry:
-    image: ghcr.io/slackerchris/arda-registry:0.1.11
+    image: ghcr.io/slackerchris/arda-registry:0.1.12
     container_name: arda-registry
     restart: unless-stopped
     env_file:

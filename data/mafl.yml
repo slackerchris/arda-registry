@@ -27,8 +27,6 @@ services:
     tags:
     - name: Infra
       color: orange
-  Media & Automation: []
-  AI & Development: []
   Ops & Monitoring:
   - title: NUTS UPS
     description: CyberPower UPS dashboard

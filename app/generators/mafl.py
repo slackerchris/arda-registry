@@ -73,6 +73,15 @@ def _merge_registry_services(config: dict, services: List[ServiceRecord]) -> int
     return rendered
 
 
+def _remove_empty_service_groups(config: dict) -> None:
+    groups = config.get("services")
+    if not isinstance(groups, dict):
+        return
+    for group_name, items in list(groups.items()):
+        if isinstance(items, list) and not items:
+            del groups[group_name]
+
+
 def _write_rendered_config(config: dict, output_file: Path) -> None:
     try:
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -99,6 +108,7 @@ def render_mafl(
 
     config = _load_base_config(source)
     rendered = _merge_registry_services(config, services)
+    _remove_empty_service_groups(config)
 
     output_file = Path(output)
     _write_rendered_config(config, output_file)

@@ -388,6 +388,29 @@ class HardeningTests(unittest.TestCase):
         self.assertIsInstance(rendered["services"], dict)
         self.assertEqual(rendered["services"]["Infrastructure"][0]["title"], "Proxmox VE")
 
+    def test_mafl_renderer_removes_empty_groups(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        output = Path(self.tmp.name) / "rendered.yml"
+        source.write_text(
+            yaml.dump(
+                {
+                    "title": "Middle Earth Labs",
+                    "services": {
+                        "Infrastructure": [{"title": "Proxmox VE", "link": "https://pve/"}],
+                        "Media & Automation": [],
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        integrations = IntegrationsConfig(mafl={"source_path": str(source), "output_path": str(output)})
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            render_mafl([])
+
+        rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
+        self.assertIn("Infrastructure", rendered["services"])
+        self.assertNotIn("Media & Automation", rendered["services"])
+
     def test_mafl_deploy_landing_zone_writes_request_without_ssh(self):
         source = Path(self.tmp.name) / "mafl.yml"
         output = Path(self.tmp.name) / "config.yml"

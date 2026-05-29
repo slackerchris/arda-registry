@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY data ./data
+COPY data ./default-data
 COPY deploy ./deploy
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

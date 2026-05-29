@@ -1,10 +1,10 @@
 services:
   arda-registry:
-    image: ghcr.io/slackerchris/arda-registry:0.1.9
+    image: ghcr.io/slackerchris/arda-registry:0.1.10
     container_name: arda-registry
     restart: unless-stopped
     env_file:
-      - .env
+      - stack.env
     ports:
       - "8888:8888"
     volumes:

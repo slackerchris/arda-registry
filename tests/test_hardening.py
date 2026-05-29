@@ -451,6 +451,24 @@ class HardeningTests(unittest.TestCase):
         self.assertFalse(landing_output.exists())
         self.assertFalse(live_output.with_name("config.deploy.yml").exists())
 
+    def test_mafl_direct_mode_permission_error_mentions_container_mount(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
+        integrations = IntegrationsConfig(
+            mafl={
+                "source_path": str(source),
+                "deploy": {
+                    "mode": "direct",
+                    "path": "/docker/mafl/config.yml",
+                },
+            },
+        )
+
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            with patch.object(Path, "mkdir", side_effect=PermissionError(13, "Permission denied", "/docker")):
+                with self.assertRaisesRegex(RuntimeError, "/docker/mafl:/docker/mafl"):
+                    render_mafl([])
+
     def test_mafl_promote_service_quotes_restart_command(self):
         service_text = Path("deploy/mafl-promote.service").read_text(encoding="utf-8")
         self.assertIn('Environment="MAFL_RESTART_COMMAND=docker restart mafl"', service_text)

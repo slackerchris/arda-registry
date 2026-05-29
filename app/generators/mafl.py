@@ -73,6 +73,19 @@ def _merge_registry_services(config: dict, services: List[ServiceRecord]) -> int
     return rendered
 
 
+def _write_rendered_config(config: dict, output_file: Path) -> None:
+    try:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_file, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    except PermissionError as exc:
+        raise RuntimeError(
+            "Cannot write Mafl config to "
+            f"{output_file}. If MAFL_DEPLOY_MODE=direct, mount the Mafl config directory "
+            "into the Arda container, for example: /docker/mafl:/docker/mafl."
+        ) from exc
+
+
 def render_mafl(
     services: List[ServiceRecord],
     output_path: str | None = None,
@@ -87,9 +100,7 @@ def render_mafl(
     rendered = _merge_registry_services(config, services)
 
     output_file = Path(output)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_file, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    _write_rendered_config(config, output_file)
 
     total = sum(len(items) for items in config.get("services", {}).values() if isinstance(items, list))
     print(f"Rendered Mafl config to {output} with {total} services.")

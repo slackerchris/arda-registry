@@ -30,7 +30,7 @@ from app.models import SLUG_RE, ServiceRecord
 from app.proxmox import ProxmoxError, get_power_status, run_docker_action, run_lxc_action, run_vm_action
 from app.registry import Registry
 
-APP_VERSION = "0.1.9"
+APP_VERSION = "0.1.10"
 
 app = FastAPI(title="Arda Registry")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))

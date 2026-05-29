@@ -57,6 +57,37 @@ docker compose up -d --build
 
 The compose file mounts `./data`, `./output`, and `/mnt/downloads` so service definitions, logs, state, and Mafl landing-zone renders stay outside the container image.
 
+### Run With Portainer / GHCR
+
+Arda is published to GitHub Container Registry:
+
+```text
+ghcr.io/slackerchris/arda-registry:latest
+```
+
+Portainer prefers `stack.env`, so the compose example uses that filename. A typical stack on the Mafl host looks like:
+
+```yaml
+services:
+  arda-registry:
+    image: ghcr.io/slackerchris/arda-registry:latest
+    container_name: arda-registry
+    restart: unless-stopped
+    env_file:
+      - stack.env
+    ports:
+      - "8888:8888"
+    volumes:
+      - /docker/arda/data:/app/data
+      - /docker/arda/output:/app/output
+      - /mnt/downloads:/mnt/downloads
+      - /docker/mafl:/docker/mafl
+      # Optional: only for the Restart Mafl button.
+      # - /var/run/docker.sock:/var/run/docker.sock
+```
+
+Use `/docker/arda/data:/app/data` when you want the registry data to persist across image upgrades. On first startup, Arda seeds `/app/data` from the bundled defaults if `data/services/` is missing.
+
 ### Validate the Registry
 
 ```bash
@@ -90,7 +121,7 @@ Example (`data/services/jellyfin.yml`):
 ```yaml
 slug: jellyfin
 name: Jellyfin
-app: jellyfin          # optional — canonical app name used for Mafl icon (mdi:<app>)
+app: simple-icons:jellyfin  # optional — exact Iconify name used by Mafl
 group: Media
 description: Family media server
 tags:
@@ -134,7 +165,7 @@ api:
 | Field | Description |
 |---|---|
 | `slug` | Unique identifier, used as the filename. Letters, numbers, `-`, `_`. |
-| `app` | Canonical app name for icon lookup (e.g. `radarr`, `sonarr`). Defaults to `slug`. |
+| `app` | Exact Iconify icon name for Mafl, such as `simple-icons:proxmox` or `mdi:robot-outline`. Unknown or missing icons fall back to `mdi:web`. |
 | `network.ip` | Required. IP address of the service. Used for routing and duplicate detection. |
 | `exposure.homepage` | Show this service in the Mafl homepage dashboard. |
 | `exposure.reverse_proxy` | Service is behind a reverse proxy; generated links use the domain name. |
@@ -182,6 +213,36 @@ pveum acl set /vms --user ansible@pve --roles PVEVMAdmin
 
 Arda supports two Mafl deploy modes. Use `landing` when Arda and Mafl are on different hosts sharing a NAS path. Use `direct` when Arda runs on the same box as Mafl and can mount the live Mafl config directory.
 
+### Mafl Rendering
+
+Arda starts from `data/mafl.yml`, then merges in active services where `exposure.homepage: true`.
+
+The default services layout is grouped:
+
+```yaml
+services:
+  Infrastructure:
+    - title: Proxmox VE
+  Media & Automation:
+    - title: Sonarr
+```
+
+You can override this with:
+
+```bash
+MAFL_SERVICES_LAYOUT=grouped       # default, preserves group names
+MAFL_SERVICES_LAYOUT=flat          # one flat services list
+MAFL_SERVICES_LAYOUT=grouped_safe  # grouped, but punctuation removed from group names
+```
+
+Known icons get brand colors automatically in generated Mafl output. For example, `simple-icons:proxmox` renders with Proxmox orange. Custom apps should either use a real Iconify icon name or omit `app` to use the safe fallback:
+
+```yaml
+app: mdi:web
+```
+
+Do not invent Iconify IDs such as `mdi:my-custom-app` unless that icon actually exists; Mafl may fail while loading the config.
+
 #### Landing Mode
 
 Landing mode writes the rendered Mafl config to a NAS landing zone and writes a small deploy request next to it. A local mover inside the Mafl LXC promotes the file into the live `/docker/mafl` config directory and restarts Mafl. This avoids SSH or Proxmox exec from Arda:
@@ -205,7 +266,6 @@ MAFL_OUTPUT_PATH=/mnt/downloads/mafl/config.yml
 MAFL_NAS_PATH=/mnt/downloads/mafl/config.yml
 MAFL_LIVE_PATH=/docker/mafl/config.yml
 MAFL_RESTART_COMMAND=docker restart homepage-mafl-1
-MAFL_DOCKER_SOCKET=/var/run/docker.sock
 ```
 
 Deploy flow:
@@ -239,15 +299,12 @@ services:
       - /docker/mafl:/docker/mafl
 ```
 
-Then configure:
+Then configure via `stack.env` or `data/integrations.yml`:
 
-```yaml
-mafl:
-  source_path: data/mafl.yml
-  output_path: /docker/mafl/config.yml
-  deploy:
-    mode: direct
-    path: /docker/mafl/config.yml
+```bash
+MAFL_DEPLOY_MODE=direct
+MAFL_LIVE_PATH=/docker/mafl/config.yml
+MAFL_SERVICES_LAYOUT=grouped
 ```
 
 Direct mode writes the file only. Restart Mafl separately unless you intentionally give Arda access to Docker control.
@@ -267,7 +324,7 @@ MAFL_RESTART_COMMAND=docker restart homepage-mafl-1
 MAFL_DOCKER_SOCKET=/var/run/docker.sock
 ```
 
-This is intentionally opt-in because mounting the Docker socket gives Arda Docker control on that host.
+This is intentionally opt-in because mounting the Docker socket gives Arda Docker control on that host. **Deploy Mafl does not restart Mafl automatically**; the Restart Mafl button is a separate action.
 
 ---
 

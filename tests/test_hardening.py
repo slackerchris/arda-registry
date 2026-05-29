@@ -414,6 +414,28 @@ class HardeningTests(unittest.TestCase):
         self.assertIsInstance(rendered["services"], list)
         self.assertEqual(rendered["services"][0]["title"], "Proxmox VE")
 
+    def test_mafl_renderer_indents_sequences_under_keys(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        output = Path(self.tmp.name) / "rendered.yml"
+        source.write_text(
+            yaml.dump(
+                {
+                    "title": "Middle Earth Labs",
+                    "services": {"Infrastructure": [{"title": "Proxmox VE", "link": "https://pve/"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+        integrations = IntegrationsConfig(
+            mafl={"source_path": str(source), "output_path": str(output), "services_layout": "flat"}
+        )
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            render_mafl([])
+
+        text = output.read_text(encoding="utf-8")
+        self.assertIn("services:\n  - ", text)
+        self.assertIn("    title: Proxmox VE", text)
+
     def test_mafl_renderer_can_preserve_grouped_config_shape(self):
         source = Path(self.tmp.name) / "mafl.yml"
         output = Path(self.tmp.name) / "rendered.yml"

@@ -9,6 +9,11 @@ from app.integrations import load_integrations
 from app.models import ServiceRecord
 
 
+class MaflYamlDumper(yaml.SafeDumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
+
 def _load_base_config(source_path: str) -> dict:
     path = Path(source_path)
     if not path.exists():
@@ -128,7 +133,14 @@ def _write_rendered_config(config: dict, output_file: Path) -> None:
     try:
         output_file.parent.mkdir(parents=True, exist_ok=True)
         with open(output_file, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            yaml.dump(
+                config,
+                f,
+                Dumper=MaflYamlDumper,
+                default_flow_style=False,
+                sort_keys=False,
+                allow_unicode=True,
+            )
     except PermissionError as exc:
         raise RuntimeError(
             "Cannot write Mafl config to "

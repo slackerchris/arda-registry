@@ -55,7 +55,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The compose file mounts `./data`, `./output`, and `/mnt/nas-downloads/mafl` so service definitions, logs, state, and Mafl landing-zone renders stay outside the container image.
+The compose file mounts `./data`, `./output`, and `/mnt/downloads` so service definitions, logs, state, and Mafl landing-zone renders stay outside the container image.
 
 ### Validate the Registry
 
@@ -189,12 +189,22 @@ Landing mode writes the rendered Mafl config to a NAS landing zone and writes a 
 ```yaml
 mafl:
   source_path: data/mafl.yml
-  output_path: /mnt/nas-downloads/mafl/config.yml   # NAS mount on this host
+  output_path: /mnt/downloads/mafl/config.yml   # NAS mount inside the Arda container
   deploy:
     mode: landing
     nas_path: /mnt/downloads/mafl/config.yml   # same landing file, as seen from inside the LXC
     path: /docker/mafl/config.yml              # live config path inside the LXC
     restart_command: docker restart mafl
+```
+
+You can also set the Mafl paths from `.env`, which is handy in Portainer:
+
+```bash
+MAFL_DEPLOY_MODE=landing
+MAFL_OUTPUT_PATH=/mnt/downloads/mafl/config.yml
+MAFL_NAS_PATH=/mnt/downloads/mafl/config.yml
+MAFL_LIVE_PATH=/docker/mafl/config.yml
+MAFL_RESTART_COMMAND=docker restart mafl
 ```
 
 Deploy flow:

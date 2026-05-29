@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, Literal, Optional
 from urllib.parse import urlparse
@@ -69,9 +70,38 @@ class IntegrationsConfig(BaseModel):
 def load_integrations(path: str | Path = "data/integrations.yml") -> IntegrationsConfig:
     config_path = Path(path)
     if not config_path.exists():
-        return IntegrationsConfig()
+        config = IntegrationsConfig()
+        _apply_env_overrides(config)
+        return config
     with open(config_path) as f:
         data = yaml.safe_load(f) or {}
     if not isinstance(data, dict):
         data = {}
-    return IntegrationsConfig(**data)
+    config = IntegrationsConfig(**data)
+    _apply_env_overrides(config)
+    return config
+
+
+def _env_value(name: str) -> str | None:
+    value = os.environ.get(name, "").strip()
+    return value or None
+
+
+def _apply_env_overrides(config: IntegrationsConfig) -> None:
+    mafl = config.mafl
+    deploy = mafl.deploy
+
+    if value := _env_value("MAFL_SOURCE_PATH"):
+        mafl.source_path = value
+    if value := _env_value("MAFL_OUTPUT_PATH"):
+        mafl.output_path = value
+    if value := _env_value("MAFL_DEPLOY_MODE"):
+        if value not in {"landing", "direct"}:
+            raise ValueError("MAFL_DEPLOY_MODE must be 'landing' or 'direct'")
+        deploy.mode = value
+    if value := _env_value("MAFL_NAS_PATH"):
+        deploy.nas_path = value
+    if value := _env_value("MAFL_LIVE_PATH"):
+        deploy.path = value
+    if value := _env_value("MAFL_RESTART_COMMAND"):
+        deploy.restart_command = value

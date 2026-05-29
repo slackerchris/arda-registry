@@ -97,6 +97,43 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(config.proxmox.key, "$PVE_API_TOKEN")
         self.assertEqual(config.proxmox.nodes["helmsdeep"].base_url, "https://10.0.99.4:8006")
 
+    def test_mafl_paths_can_be_overridden_by_environment(self):
+        config_path = Path(self.tmp.name) / "integrations.yml"
+        config_path.write_text(
+            yaml.dump(
+                {
+                    "mafl": {
+                        "output_path": "/old/config.yml",
+                        "deploy": {
+                            "mode": "landing",
+                            "nas_path": "/old/nas/config.yml",
+                            "path": "/old/live/config.yml",
+                        },
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with patch.dict(
+            "os.environ",
+            {
+                "MAFL_DEPLOY_MODE": "direct",
+                "MAFL_OUTPUT_PATH": "/docker/mafl/config.yml",
+                "MAFL_NAS_PATH": "/mnt/downloads/mafl/config.yml",
+                "MAFL_LIVE_PATH": "/docker/mafl/config.yml",
+                "MAFL_RESTART_COMMAND": "docker restart mafl",
+            },
+            clear=False,
+        ):
+            config = load_integrations(config_path)
+
+        self.assertEqual(config.mafl.output_path, "/docker/mafl/config.yml")
+        self.assertEqual(config.mafl.deploy.mode, "direct")
+        self.assertEqual(config.mafl.deploy.nas_path, "/mnt/downloads/mafl/config.yml")
+        self.assertEqual(config.mafl.deploy.path, "/docker/mafl/config.yml")
+        self.assertEqual(config.mafl.deploy.restart_command, "docker restart mafl")
+
     def test_create_form_validation_errors_do_not_500(self):
         resp = self.client.post(
             "/services/new",

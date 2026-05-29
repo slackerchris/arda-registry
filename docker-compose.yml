@@ -1,6 +1,6 @@
 services:
   arda-registry:
-    image: ghcr.io/slackerchris/arda-registry:0.1.4
+    image: ghcr.io/slackerchris/arda-registry:0.1.5
     container_name: arda-registry
     restart: unless-stopped
     env_file:
@@ -10,6 +10,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./output:/app/output
-      - /mnt/nas-downloads/mafl:/mnt/nas-downloads/mafl
+      - /mnt/downloads:/mnt/downloads
       # Enable this too if using mafl.deploy.mode=direct on the Mafl host.
       # - /docker/mafl:/docker/mafl

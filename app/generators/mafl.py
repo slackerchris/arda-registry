@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime, timezone
+import re
 from typing import List
 
 import yaml
@@ -53,6 +54,26 @@ def _service_item(svc: ServiceRecord) -> dict:
     if svc.tags:
         item["tags"] = [{"name": svc.tags[0].title(), "color": "blue"}]
     return item
+
+
+def _safe_group_name(name: str) -> str:
+    safe = name.replace("&", " and ")
+    safe = re.sub(r"[^A-Za-z0-9 ]+", " ", safe)
+    safe = re.sub(r"\s+", " ", safe).strip()
+    return safe or "Services"
+
+
+def _normalize_service_groups(config: dict) -> None:
+    groups = config.get("services")
+    if not isinstance(groups, dict):
+        return
+    normalized: dict[str, list] = {}
+    for group_name, items in groups.items():
+        if not isinstance(items, list):
+            continue
+        safe_name = _safe_group_name(str(group_name))
+        normalized.setdefault(safe_name, []).extend(items)
+    config["services"] = normalized
 
 
 def _merge_registry_services(config: dict, services: List[ServiceRecord]) -> int:
@@ -131,6 +152,9 @@ def render_mafl(
     rendered = _merge_registry_services(config, services)
     if mafl.services_layout == "flat":
         _flatten_service_groups(config)
+    elif mafl.services_layout == "grouped_safe":
+        _normalize_service_groups(config)
+        _remove_empty_service_groups(config)
     else:
         _remove_empty_service_groups(config)
 

@@ -59,7 +59,7 @@ class MaflDeployConfig(BaseModel):
 class MaflIntegrationConfig(BaseModel):
     source_path: str = "data/mafl.yml"
     output_path: str = "output/mafl/config.yml"
-    services_layout: Literal["flat", "grouped"] = "flat"
+    services_layout: Literal["flat", "grouped", "grouped_safe"] = "grouped_safe"
     deploy: MaflDeployConfig = Field(default_factory=MaflDeployConfig)
 
 
@@ -97,8 +97,8 @@ def _apply_env_overrides(config: IntegrationsConfig) -> None:
     if value := _env_value("MAFL_OUTPUT_PATH"):
         mafl.output_path = value
     if value := _env_value("MAFL_SERVICES_LAYOUT"):
-        if value not in {"flat", "grouped"}:
-            raise ValueError("MAFL_SERVICES_LAYOUT must be 'flat' or 'grouped'")
+        if value not in {"flat", "grouped", "grouped_safe"}:
+            raise ValueError("MAFL_SERVICES_LAYOUT must be 'flat', 'grouped', or 'grouped_safe'")
         mafl.services_layout = value
     if value := _env_value("MAFL_DEPLOY_MODE"):
         if value not in {"landing", "direct"}:

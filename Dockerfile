@@ -6,7 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system arda && adduser --system --ingroup arda arda
+RUN addgroup --system arda \
+    && adduser --system --ingroup arda arda \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,10 +18,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY data ./data
 COPY deploy ./deploy
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN mkdir -p output/state output/logs && chown -R arda:arda /app
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && mkdir -p output/state output/logs \
+    && chown -R arda:arda /app
 
-USER arda
 EXPOSE 8888
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["python", "app/main.py", "serve", "--host", "0.0.0.0", "--port", "8888"]

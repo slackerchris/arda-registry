@@ -309,6 +309,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const el = document.querySelector(`[data-power="${slug}"]`);
       if (!el) continue;
       const power = info.power || 'unknown';
+      if (power === 'unknown') {
+        el.style.display = 'none';
+        continue;
+      }
       el.textContent = power;
       el.className = power === 'running'
         ? 'badge badge-green'

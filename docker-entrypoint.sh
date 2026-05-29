@@ -25,6 +25,9 @@ if [ "$(id -u)" = "0" ]; then
   if [ -n "${MAFL_LIVE_PATH:-}" ]; then
     mkdir -p "$(dirname "$MAFL_LIVE_PATH")" 2>/dev/null || true
     chown arda:arda "$(dirname "$MAFL_LIVE_PATH")" 2>/dev/null || true
+    if [ -e "$MAFL_LIVE_PATH" ]; then
+      chown arda:arda "$MAFL_LIVE_PATH" 2>/dev/null || true
+    fi
   fi
 
   exec gosu arda "$@"

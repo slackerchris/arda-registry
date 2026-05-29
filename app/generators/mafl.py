@@ -82,7 +82,8 @@ def _write_rendered_config(config: dict, output_file: Path) -> None:
         raise RuntimeError(
             "Cannot write Mafl config to "
             f"{output_file}. If MAFL_DEPLOY_MODE=direct, mount the Mafl config directory "
-            "into the Arda container, for example: /docker/mafl:/docker/mafl."
+            "into the Arda container, for example: /docker/mafl:/docker/mafl. "
+            "If it is already mounted, check that the Arda container user can write the existing config file."
         ) from exc
 
 

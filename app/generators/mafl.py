@@ -9,6 +9,26 @@ from app.integrations import load_integrations
 from app.models import ServiceRecord
 
 DEFAULT_ICON = "mdi:web"
+ICON_COLORS = {
+    "simple-icons:proxmox": "#e57000",
+    "simple-icons:truenas": "#0095d5",
+    "simple-icons:nginxproxymanager": "#f15833",
+    "simple-icons:ubiquiti": "#0559c9",
+    "simple-icons:audiobookshelf": "#4d3e6e",
+    "simple-icons:immich": "#4250ef",
+    "simple-icons:sonarr": "#35c5f4",
+    "simple-icons:radarr": "#ffc230",
+    "simple-icons:prowlarr": "#a2a2a2",
+    "simple-icons:sabnzbd": "#f59e0b",
+    "simple-icons:jellyfin": "#00a4dc",
+    "simple-icons:qbittorrent": "#2f67ba",
+    "simple-icons:portainer": "#13bef9",
+    "simple-icons:github": "#ffffff",
+    "mdi:movie-open": "#22d3ee",
+    "mdi:movie-cog": "#f97316",
+    "mdi:robot-outline": "#4ade80",
+    "mdi:web": "#94a3b8",
+}
 
 
 class MaflYamlDumper(yaml.SafeDumper):
@@ -48,14 +68,17 @@ def _service_item(svc: ServiceRecord) -> dict:
     icon_name = svc.app or DEFAULT_ICON
     if ":" not in icon_name:
         icon_name = DEFAULT_ICON
+    icon = {
+        "name": icon_name,
+        "wrap": True,
+    }
+    if icon_color := ICON_COLORS.get(icon_name):
+        icon["color"] = icon_color
     item = {
         "title": svc.name,
         "description": svc.description,
         "link": _service_link(svc),
-        "icon": {
-            "name": icon_name,
-            "wrap": True,
-        },
+        "icon": icon,
         "status": {"enabled": True},
     }
     if svc.tags:

@@ -413,6 +413,27 @@ class HardeningTests(unittest.TestCase):
         item = rendered["services"]["Media & Automation"][0]
         self.assertEqual(item["icon"]["name"], "mdi:web")
 
+    def test_mafl_renderer_adds_known_icon_brand_colors(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        output = Path(self.tmp.name) / "rendered.yml"
+        source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
+        service = ServiceRecord(
+            **valid_service(
+                slug="proxmox",
+                name="Proxmox VE",
+                app="simple-icons:proxmox",
+                group="Infrastructure",
+                exposure={"homepage": True, "reverse_proxy": True, "public": False},
+            )
+        )
+        integrations = IntegrationsConfig(mafl={"source_path": str(source), "output_path": str(output)})
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            render_mafl([service])
+
+        rendered = yaml.safe_load(output.read_text(encoding="utf-8"))
+        item = rendered["services"]["Infrastructure"][0]
+        self.assertEqual(item["icon"]["color"], "#e57000")
+
     def test_mafl_renderer_can_emit_flat_config_shape(self):
         source = Path(self.tmp.name) / "mafl.yml"
         output = Path(self.tmp.name) / "rendered.yml"

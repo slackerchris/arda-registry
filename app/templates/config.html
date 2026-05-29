@@ -34,6 +34,10 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="btn btn-ghost">Deploy Mafl</button>
       </form>
+      <form method="post" action="/restart/mafl" onsubmit="return confirm('Restart the Mafl Docker container?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost">Restart Mafl</button>
+      </form>
       <form method="post" action="/render/monitoring">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="btn btn-ghost">Render Monitoring</button>

@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from app import web
 from app.integrations import IntegrationsConfig, load_integrations
-from app.generators.mafl import render_mafl, sync_mafl
+from app.generators.mafl import render_mafl, restart_mafl_container, sync_mafl
 from app.models import ServiceRecord
 from app.proxmox import run_lxc_action
 
@@ -588,6 +588,53 @@ class HardeningTests(unittest.TestCase):
         self.assertFalse(landing_output.exists())
         self.assertFalse(live_output.with_name("config.deploy.yml").exists())
 
+    def test_mafl_deploy_direct_mode_does_not_restart_automatically(self):
+        source = Path(self.tmp.name) / "mafl.yml"
+        live_output = Path(self.tmp.name) / "docker" / "mafl" / "config.yml"
+        source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
+        service = ServiceRecord(
+            **valid_service(
+                exposure={"homepage": True, "reverse_proxy": True, "public": False},
+            )
+        )
+        integrations = IntegrationsConfig(
+            mafl={
+                "source_path": str(source),
+                "deploy": {
+                    "mode": "direct",
+                    "path": str(live_output),
+                    "restart_command": "docker restart homepage-mafl-1",
+                },
+            },
+        )
+
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            with patch("app.generators.mafl._restart_docker_container", new=AsyncMock()) as restart:
+                import asyncio
+
+                asyncio.run(sync_mafl([service]))
+
+        self.assertTrue(live_output.exists())
+        restart.assert_not_called()
+
+    def test_mafl_restart_uses_configured_docker_restart_command(self):
+        integrations = IntegrationsConfig(
+            mafl={
+                "deploy": {
+                    "restart_command": "docker restart homepage-mafl-1",
+                    "docker_socket": "/tmp/docker.sock",
+                },
+            },
+        )
+
+        with patch("app.generators.mafl.load_integrations", return_value=integrations):
+            with patch("app.generators.mafl._restart_docker_container", new=AsyncMock()) as restart:
+                import asyncio
+
+                asyncio.run(restart_mafl_container())
+
+        restart.assert_awaited_once_with("homepage-mafl-1", "/tmp/docker.sock")
+
     def test_mafl_direct_mode_permission_error_mentions_container_mount(self):
         source = Path(self.tmp.name) / "mafl.yml"
         source.write_text(yaml.dump({"title": "Middle Earth Labs", "services": {}}), encoding="utf-8")
@@ -635,6 +682,19 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("config_action=deployed", resp.headers["location"])
         self.assertIn("config_target=mafl", resp.headers["location"])
         sync.assert_called_once()
+
+    def test_restart_mafl_route_dispatches_restart_action(self):
+        web.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with patch("app.web.restart_mafl_container", new=AsyncMock()) as restart:
+            resp = self.client.post(
+                "/restart/mafl",
+                data={"csrf_token": web._csrf_token()},
+                follow_redirects=False,
+            )
+        self.assertEqual(resp.status_code, 303)
+        self.assertIn("config_action=restarted", resp.headers["location"])
+        self.assertIn("config_target=mafl", resp.headers["location"])
+        restart.assert_awaited_once()
 
 
 if __name__ == "__main__":

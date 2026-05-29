@@ -19,4 +19,4 @@ mafl:
     mode: landing
     nas_path: /mnt/downloads/mafl/config.yml
     path: /docker/mafl/config.yml
-    restart_command: docker restart mafl
+    restart_command: docker restart homepage-mafl-1

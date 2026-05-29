@@ -1,6 +1,6 @@
 services:
   arda-registry:
-    image: ghcr.io/slackerchris/arda-registry:0.1.17
+    image: ghcr.io/slackerchris/arda-registry:0.1.18
     container_name: arda-registry
     restart: unless-stopped
     env_file:
@@ -13,3 +13,5 @@ services:
       - /mnt/downloads:/mnt/downloads
       # Enable this too if using mafl.deploy.mode=direct on the Mafl host.
       # - /docker/mafl:/docker/mafl
+      # Optional: enable only if you want Arda's Restart Mafl button.
+      # - /var/run/docker.sock:/var/run/docker.sock

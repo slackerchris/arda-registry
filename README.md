@@ -194,7 +194,7 @@ mafl:
     mode: landing
     nas_path: /mnt/downloads/mafl/config.yml   # same landing file, as seen from inside the LXC
     path: /docker/mafl/config.yml              # live config path inside the LXC
-    restart_command: docker restart mafl
+    restart_command: docker restart homepage-mafl-1
 ```
 
 You can also set the Mafl paths from `.env`, which is handy in Portainer:
@@ -204,7 +204,8 @@ MAFL_DEPLOY_MODE=landing
 MAFL_OUTPUT_PATH=/mnt/downloads/mafl/config.yml
 MAFL_NAS_PATH=/mnt/downloads/mafl/config.yml
 MAFL_LIVE_PATH=/docker/mafl/config.yml
-MAFL_RESTART_COMMAND=docker restart mafl
+MAFL_RESTART_COMMAND=docker restart homepage-mafl-1
+MAFL_DOCKER_SOCKET=/var/run/docker.sock
 ```
 
 Deploy flow:
@@ -250,6 +251,23 @@ mafl:
 ```
 
 Direct mode writes the file only. Restart Mafl separately unless you intentionally give Arda access to Docker control.
+
+To enable the **Restart Mafl** button in direct mode, mount Docker's socket into the Arda container and set `MAFL_RESTART_COMMAND` to the Mafl Docker container name:
+
+```yaml
+services:
+  arda-registry:
+    volumes:
+      - /docker/mafl:/docker/mafl
+      - /var/run/docker.sock:/var/run/docker.sock
+```
+
+```bash
+MAFL_RESTART_COMMAND=docker restart homepage-mafl-1
+MAFL_DOCKER_SOCKET=/var/run/docker.sock
+```
+
+This is intentionally opt-in because mounting the Docker socket gives Arda Docker control on that host.
 
 ---
 

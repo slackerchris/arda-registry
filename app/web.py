@@ -23,14 +23,14 @@ import httpx
 import yaml
 
 from app.generators.ansible import render_ansible
-from app.generators.mafl import render_mafl, sync_mafl
+from app.generators.mafl import render_mafl, restart_mafl_container, sync_mafl
 from app.generators.monitoring import render_monitoring
 from app.integrations import load_integrations
 from app.models import SLUG_RE, ServiceRecord
 from app.proxmox import ProxmoxError, get_power_status, run_docker_action, run_lxc_action, run_vm_action
 from app.registry import Registry
 
-APP_VERSION = "0.1.17"
+APP_VERSION = "0.1.18"
 
 app = FastAPI(title="Arda Registry")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -1482,6 +1482,22 @@ async def sync_mafl_config(request: Request):
         return _redirect_with_query(path="/config", error=f"Mafl deploy failed: {str(exc)[:120]}")
 
     return _redirect_with_query(path="/config", config_action="deployed", config_target="mafl")
+
+
+@app.post("/restart/mafl")
+async def restart_mafl_config(request: Request):
+    form = await request.form()
+    if not _verify_csrf(form):
+        return _csrf_error_redirect("/config")
+
+    try:
+        await restart_mafl_container()
+    except Exception as exc:
+        app_logger.exception("Mafl restart failed")
+        _health_log(event="deploy_error", target="mafl_restart", error=str(exc))
+        return _redirect_with_query(path="/config", error=f"Mafl restart failed: {str(exc)[:120]}")
+
+    return _redirect_with_query(path="/config", config_action="restarted", config_target="mafl")
 
 
 @app.post("/import/npm")

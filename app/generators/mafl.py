@@ -1,8 +1,11 @@
 from pathlib import Path
 from datetime import datetime, timezone
 import re
+import shlex
 from typing import List
+from urllib.parse import quote
 
+import httpx
 import yaml
 
 from app.integrations import load_integrations
@@ -237,6 +240,43 @@ def _write_landing_zone_request(output_file: Path, deploy) -> Path:
     with open(request_path, "w") as f:
         yaml.dump(payload, f, default_flow_style=False, sort_keys=False)
     return request_path
+
+
+def _docker_restart_target(restart_command: str | None) -> str | None:
+    if not restart_command:
+        return None
+    parts = shlex.split(restart_command)
+    if len(parts) == 3 and parts[:2] == ["docker", "restart"]:
+        return parts[2]
+    raise RuntimeError("MAFL_RESTART_COMMAND only supports: docker restart <container>")
+
+
+async def _restart_docker_container(container_name: str, socket_path: str | None) -> None:
+    socket = Path(socket_path or "/var/run/docker.sock")
+    if not socket.exists():
+        raise RuntimeError(
+            "Docker socket is not mounted. Add /var/run/docker.sock:/var/run/docker.sock "
+            "to the Arda container volumes or restart Mafl manually."
+        )
+
+    transport = httpx.AsyncHTTPTransport(uds=str(socket))
+    async with httpx.AsyncClient(transport=transport, base_url="http://docker") as client:
+        try:
+            resp = await client.post(f"/containers/{quote(container_name, safe='')}/restart", timeout=15.0)
+            if resp.status_code >= 400:
+                raise RuntimeError(f"Docker restart failed: HTTP {resp.status_code} {resp.text[:120]}")
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Docker restart failed: {exc}") from exc
+
+
+async def restart_mafl_container() -> None:
+    integrations = load_integrations()
+    deploy = integrations.mafl.deploy
+    target = _docker_restart_target(deploy.restart_command)
+    if not target:
+        raise RuntimeError("MAFL_RESTART_COMMAND is not configured")
+    await _restart_docker_container(target, deploy.docker_socket)
+    print(f"Restarted Mafl container {target}.")
 
 
 async def sync_mafl(services: List[ServiceRecord]):

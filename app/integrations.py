@@ -54,6 +54,7 @@ class MaflDeployConfig(BaseModel):
     host: Optional[str] = None
     path: Optional[str] = None
     restart_command: Optional[str] = None
+    docker_socket: Optional[str] = "/var/run/docker.sock"
 
 
 class MaflIntegrationConfig(BaseModel):
@@ -110,3 +111,5 @@ def _apply_env_overrides(config: IntegrationsConfig) -> None:
         deploy.path = value
     if value := _env_value("MAFL_RESTART_COMMAND"):
         deploy.restart_command = value
+    if value := _env_value("MAFL_DOCKER_SOCKET"):
+        deploy.docker_socket = value

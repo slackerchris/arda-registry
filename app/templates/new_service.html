@@ -467,6 +467,9 @@
     row.querySelectorAll('input').forEach((input) => {
       input.addEventListener('input', syncHidden);
     });
+    row.querySelectorAll('select').forEach((select) => {
+      select.addEventListener('change', syncHidden);
+    });
     row.querySelector('[data-domain-remove]')?.addEventListener('click', () => {
       row.remove();
       if (!container.children.length) addRow();
@@ -503,6 +506,7 @@
   }
 
   addButton.addEventListener('click', () => addRow());
+  hiddenInput.form?.addEventListener('submit', syncHidden);
 }());
 </script>
 {% endblock %}

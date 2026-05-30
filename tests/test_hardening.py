@@ -727,6 +727,11 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("created=1", resp.headers["location"])
         sync.assert_called_once()
 
+    def test_domain_usage_select_updates_hidden_json_before_save(self):
+        template = Path("app/templates/new_service.html").read_text(encoding="utf-8")
+        self.assertIn("select.addEventListener('change', syncHidden)", template)
+        self.assertIn("hiddenInput.form?.addEventListener('submit', syncHidden)", template)
+
 
 if __name__ == "__main__":
     unittest.main()

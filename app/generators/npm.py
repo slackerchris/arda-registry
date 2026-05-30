@@ -39,9 +39,10 @@ def sync_npm(services: List[ServiceRecord]):
         except requests.exceptions.RequestException as e:
             print(f"Failed to get existing proxy hosts: {e}")
             
-    count = 0
+    created = updated = skipped = failed = 0
     for svc in services:
         if not svc.exposure.reverse_proxy or not svc.network.service_domains:
+            skipped += 1
             continue
 
         domains = svc.network.service_domains
@@ -80,11 +81,13 @@ def sync_npm(services: List[ServiceRecord]):
                     )
                     resp.raise_for_status()
                     print(f"Updated existing proxy host for {primary_domain} (ID {host_id})")
-                    count += 1
+                    updated += 1
                 except requests.exceptions.RequestException as e:
                     print(f"Error updating proxy host for {primary_domain}: {e}")
+                    failed += 1
             else:
                 print(f"[Dry Run] Would update proxy host for {primary_domain} -> {target_ip}:{target_port}")
+                updated += 1
         else:
             if token:
                 try:
@@ -96,11 +99,14 @@ def sync_npm(services: List[ServiceRecord]):
                     )
                     resp.raise_for_status()
                     print(f"Created new proxy host for {primary_domain}")
-                    count += 1
+                    created += 1
                 except requests.exceptions.RequestException as e:
                     print(f"Error creating proxy host for {primary_domain}: {e}")
+                    failed += 1
             else:
                 print(f"[Dry Run] Would create proxy host for {primary_domain} -> {target_ip}:{target_port}")
+                created += 1
                 
     if token:
-        print(f"Successfully synced {count} proxy hosts to NPM.")
+        print(f"Successfully synced {created + updated} proxy hosts to NPM.")
+    return {"created": created, "updated": updated, "skipped": skipped, "failed": failed}

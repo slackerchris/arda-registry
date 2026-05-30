@@ -25,12 +25,13 @@ import yaml
 from app.generators.ansible import render_ansible
 from app.generators.mafl import render_mafl, restart_mafl_container, sync_mafl
 from app.generators.monitoring import render_monitoring
+from app.generators.npm import sync_npm
 from app.integrations import load_integrations
 from app.models import SLUG_RE, ServiceRecord
 from app.proxmox import ProxmoxError, get_power_status, run_docker_action, run_lxc_action, run_vm_action
 from app.registry import Registry
 
-APP_VERSION = "0.1.19"
+APP_VERSION = "0.1.20"
 
 app = FastAPI(title="Arda Registry")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -1714,6 +1715,43 @@ async def sync_from_npm(request: Request):
             created += 1
 
     return _redirect_with_query(path="/config", synced=updated, created=created, skipped=skipped)
+
+
+@app.post("/publish/npm")
+async def publish_to_npm(request: Request):
+    form = await request.form()
+    if not _verify_csrf(form):
+        return _csrf_error_redirect("/config")
+    npm_url = os.environ.get("NPM_URL", "").strip().rstrip("/")
+    email = os.environ.get("NPM_EMAIL", "").strip()
+    password = os.environ.get("NPM_PASSWORD", "").strip()
+
+    if not npm_url or not email or not password:
+        err = "NPM credentials not configured (set NPM_URL, NPM_EMAIL, NPM_PASSWORD)"
+        return _redirect_with_query(path="/config", error=err)
+
+    try:
+        registry = _load_valid_registry()
+        result = await asyncio.to_thread(sync_npm, registry.services)
+    except Exception as exc:
+        app_logger.exception("NPM publish failed")
+        return _redirect_with_query(path="/config", error=f"NPM publish failed: {str(exc)[:120]}")
+
+    if result.get("failed"):
+        return _redirect_with_query(
+            path="/config",
+            error=(
+                "NPM publish completed with "
+                f"{result.get('failed')} failed host(s); check container logs for details"
+            ),
+        )
+
+    return _redirect_with_query(
+        path="/config",
+        synced=result.get("updated", 0),
+        created=result.get("created", 0),
+        skipped=result.get("skipped", 0),
+    )
 
 
 # ---------------------------------------------------------------------------

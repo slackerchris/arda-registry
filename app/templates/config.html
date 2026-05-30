@@ -67,7 +67,11 @@
       </form>
       <form method="post" action="/sync/npm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="btn btn-ghost" {% if not npm_configured %}disabled title="Configure NPM credentials first"{% endif %}>↻ Sync NPM</button>
+        <button type="submit" class="btn btn-ghost" {% if not npm_configured %}disabled title="Configure NPM credentials first"{% endif %}>↻ Pull from NPM</button>
+      </form>
+      <form method="post" action="/publish/npm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-ghost" {% if not npm_configured %}disabled title="Configure NPM credentials first"{% endif %}>↑ Publish to NPM</button>
       </form>
     </div>
   </div>

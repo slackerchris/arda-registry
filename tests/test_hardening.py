@@ -696,6 +696,37 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("config_target=mafl", resp.headers["location"])
         restart.assert_awaited_once()
 
+    def test_publish_npm_route_pushes_registry_services_to_npm(self):
+        web.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        service = valid_service(
+            slug="arda-registry",
+            network={
+                "vlan": "infra",
+                "host": "arda-registry",
+                "ip": "10.0.0.98",
+                "dns": ["arda.throne.middl.earth"],
+            },
+            backend={"scheme": "http", "port": 8888},
+            exposure={"homepage": True, "reverse_proxy": True, "public": False},
+        )
+        (web.DATA_DIR / "arda-registry.yml").write_text(yaml.dump(service), encoding="utf-8")
+
+        with patch.dict(
+            "os.environ",
+            {"NPM_URL": "https://npm.example", "NPM_EMAIL": "user@example.com", "NPM_PASSWORD": "secret"},
+            clear=False,
+        ):
+            with patch("app.web.sync_npm", return_value={"created": 1, "updated": 0, "skipped": 0, "failed": 0}) as sync:
+                resp = self.client.post(
+                    "/publish/npm",
+                    data={"csrf_token": web._csrf_token()},
+                    follow_redirects=False,
+                )
+
+        self.assertEqual(resp.status_code, 303)
+        self.assertIn("created=1", resp.headers["location"])
+        sync.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
